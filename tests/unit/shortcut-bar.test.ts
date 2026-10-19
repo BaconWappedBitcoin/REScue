@@ -335,11 +335,11 @@ describe('shortcut bar: reorder, sort, groups and the rest', () => {
     const route = { kind: 'subreddit', path: '/r/pics', subreddit: 'pics' };
     const t = await boot([row('aa')], {}, { route });
     const btn = () => q('[data-rescue-toggle]')!;
-    expect(btn().textContent).toBe('+ r/pics');
+    expect(btn().textContent).toBe('+shortcut');
     btn().click();
     expect(t.last().map((r) => r.target)).toEqual(['aa', 'r/pics']);
     t.redraw(t.last());
-    expect(btn().textContent).toBe('− r/pics');
+    expect(btn().textContent).toBe('−shortcut');
     expect(btn().getAttribute('data-rescue-toggle')).toBe('remove');
     btn().click();
     expect(targets(t.last())).toEqual(['aa']);

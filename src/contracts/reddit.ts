@@ -228,6 +228,9 @@ export const C = {
     loggedOut: 'reddit-header-large a[href*="/login"], faceplate-tracker[noun="login"]',
     usernameAttrSel: 'shreddit-app > after-login-toast-dispatcher[username]',
     usernameAttr: 'username',
+    /** Near the top of the page, before the posts: lets REScue start before the page has finished. */
+    currentUser: 'rs-current-user[display-name]',
+    currentUserAttr: 'display-name',
     loggedInAttr: 'user-logged-in',
     usernameLinks:
       'reddit-header-large a[href*="/user/"], #expand-user-drawer-button a[href*="/user/"], ' +

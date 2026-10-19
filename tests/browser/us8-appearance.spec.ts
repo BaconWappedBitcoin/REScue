@@ -216,10 +216,10 @@ test('the “+ r/name” button adds the subreddit you are in, live', async () =
   await page.goto(LISTING);
   const bar = page.locator('#rescue-subreddit-bar');
   await expect(bar.locator('a')).toHaveText(['aww']);
-  await bar.getByRole('button', { name: '+ r/programming' }).click();
+  await bar.getByRole('button', { name: '+shortcut' }).click();
   await expect(bar.locator('a')).toHaveText(['aww', 'programming']);
   // The same button now removes it (the toggle).
-  await expect(bar.locator('[data-rescue-toggle="remove"]')).toHaveText('− r/programming');
+  await expect(bar.locator('[data-rescue-toggle="remove"]')).toHaveText('−shortcut');
   await expect(bar.locator('a[aria-current="page"]')).toHaveText('programming');
 });
 

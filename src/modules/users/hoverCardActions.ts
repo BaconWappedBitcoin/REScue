@@ -74,8 +74,10 @@ function button(text: string, onClick: (btn: HTMLButtonElement) => void): HTMLBu
 function addActions(ctx: ModuleContext, content: HTMLElement, user: string): void {
   const row: Row = { user, ignore: null, highlight: null };
   const box = h('div', { class: HOVER_ACTIONS_CLASS });
-  const tagger = taggerApi();
-  if (tagger && ctx.session?.username?.toLowerCase() !== user.toLowerCase()) {
+  // The tagger is on (dependsOn) but may still be reading its tags: it is looked up on click.
+  const tagger = ctx.settings.definitions().find((d) => d.id === 'userTagger');
+  const taggerOn = !!tagger && isModuleEnabled(tagger, ctx.settings.profile());
+  if (taggerOn && ctx.session?.username?.toLowerCase() !== user.toLowerCase()) {
     const tag = button(label.tag, (b) => taggerApi()?.edit(user, b));
     tag.title = hint.hoverTag(user);
     row.ignore = button(

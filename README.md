@@ -25,10 +25,17 @@ instead of breaking the page.
 - **Old Reddit look** (opt-in): feeds, search and comment threads restyled like old.reddit.com.
   You get the vote column with rank numbers, small thumbnails, blue titles with `(domain)`,
   "submitted 2 hours ago by user to r/sub", the flat `comments share save hide report` row, sort
-  tabs, green pinned posts, and old-style comment heads. It appears from the first paint, with no
-  flash of the new design. Every vote and button press goes through Reddit's own controls.
-- **filteReddit**: hide posts by keyword, subreddit, domain, user, flair or NSFW. A banner says
-  what was hidden and lets you reveal it.
+  tabs, green pinned posts, thumbnails that open the link, the thin subreddit bar across the top,
+  and old-style comment heads. It appears from the first paint, with no flash of the new design,
+  and REScue starts while Reddit is still sending the page. Every vote and button press goes
+  through Reddit's own controls.
+- **filteReddit**: hide posts by keyword, subreddit, domain, user, flair or NSFW, and collapse or
+  hide comments by keyword, user, score or depth. A banner says what was hidden and lets you reveal
+  it.
+- **Low-effort reply filter** (on by default): replies that only agree, such as "This!", "100%",
+  "I agree", "Exactly" or "+1", are collapsed, with the replies under them left visible. Questions,
+  longer comments and picture-only comments are never caught. Switch it to hide, or off, in
+  filteReddit.
 - **Neutrality filter** (opt-in): an optional chip on each news link showing who shares that
   domain, coloured from blue (left-leaning audience) through grey to red (right-leaning audience).
   You can also hide far-left and far-right domains, with separate strictness for each side. Scores
@@ -118,7 +125,7 @@ By RES module:
 | RES module | REScue |
 |---|---|
 | **Settings, backup and restore, presets, command line, troubleshooter** | In REScue. Backup is a file you keep, or your browser's own sync; there is no Dropbox or Google Drive. Your RES backup's tags and filters can be imported. |
-| **filteReddit** | In REScue: keywords, subreddits, domains, users, flair and NSFW, each with a reason and a way to reveal it. |
+| **filteReddit** | In REScue: keywords, subreddits, domains, users, flair and NSFW for posts; keyword, user, score and depth for comments; each with a reason and a way to reveal it. |
 | **Keyboard navigation** | In REScue: `j`/`k`, open, vote, save, hide, go-to keys and the help overlay. Voting on comments from the keyboard works through Reddit's own buttons. |
 | **User tagger, user highlight** | In REScue: tags, colours, ignore (now with an ignore button), vote tally, and highlights for moderators, friends and tagged users. |
 | **Comment navigator, hide child comments, show parent, remember collapsed comments, new comment count, saved comments, table tools** | In REScue. |
@@ -131,9 +138,9 @@ By RES module:
 | **Comment depth, context links, per-subreddit styles, account switcher, report-as-spam** | Obsolete or excluded. Reddit ignores `?depth=` and `?context=`, has no subreddit CSS, and switches accounts itself. RES's account switcher stored passwords, which REScue never does. |
 | **View source, comment macros, submit helper, message menu, mod helper** | Not yet. |
 
-**REScue extras** that RES never had: the Old Reddit look, the neutrality filter, hiding promoted
-posts and "Suggested communities", an ignore button on posts and comments, a front-page sort, and
-loading the next page sooner.
+**REScue extras** that RES never had: the Old Reddit look, the neutrality filter, the low-effort
+reply filter, hiding promoted posts and "Suggested communities", an ignore button on posts and
+comments, a front-page sort, and loading the next page sooner.
 
 The full option-by-option audit is in
 [`specs/001-rescue-foundation/res-option-parity.md`](specs/001-rescue-foundation/res-option-parity.md),
@@ -164,7 +171,10 @@ address REScue may read, are in the [privacy policy](PRIVACY.md).
   writes into them. Actions press Reddit's own controls and are confirmed by what Reddit's buttons
   show afterwards.
 - **Opt-in for anything that changes Reddit's look or hides content.** Skins, hiding and filters
-  are off until you turn them on, and every hidden item can be revealed.
+  are off until you turn them on, and every hidden item can be revealed. The one exception is the
+  low-effort reply filter, which only collapses agreement-only replies and can be switched off.
+- **Starts early.** REScue starts as soon as the header, your sign-in and the first post are on the
+  page, rather than when Reddit has sent all of it, and its features start side by side.
 
 ## Development
 

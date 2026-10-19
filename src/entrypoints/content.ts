@@ -27,7 +27,7 @@ import { Decorations } from '../layout/decorations';
 import { NativeAdapter } from '../layout/native/adapter';
 import { Selection } from '../layout/native/selection';
 import { createToolbar } from '../layout/native/toolbar';
-import { readSession, watchSession } from '../model/session';
+import { pageStartable, readSession, watchSession } from '../model/session';
 import { MODULES } from '../modules';
 import {
   applyEarlyCommentMedia,
@@ -36,7 +36,7 @@ import {
 import { applyEarlySkin, clearEarlySkin } from '../modules/appearance/oldSkin/early';
 import { SKIN_STYLE_ID } from '../modules/appearance/oldRedditSkin';
 import { applyEarlyFrontSort } from '../modules/appearance/logoLink';
-import { PING } from "../core/startupCheck";
+import { PING } from '../core/startupCheck';
 import { readNoticePrefs, withMutedTypes } from '../modules/core/noticeSettings';
 
 const FROM_OLD_PARAM = 'rescue_from_old';
@@ -84,11 +84,25 @@ export default defineContentScript({
     // The Old Reddit look, likewise, from the first paint (oldSkin/early.ts).
     applyEarlySkin(location.href);
 
-    const domReady = new Promise<void>((resolve) =>
-      document.readyState === 'loading'
-        ? document.addEventListener('DOMContentLoaded', () => resolve(), { once: true })
-        : resolve(),
-    );
+    // Start as soon as the header, the signed-in state and the first post are in, not when Reddit
+    // has sent the whole page: on a long thread that was most of a second of hidden posts.
+    const domReady = new Promise<void>((resolve) => {
+      if (document.readyState !== 'loading' || pageStartable()) return resolve();
+      const watch = new MutationObserver(() => {
+        if (!pageStartable()) return;
+        watch.disconnect();
+        resolve();
+      });
+      watch.observe(document.documentElement, { childList: true, subtree: true });
+      document.addEventListener(
+        'DOMContentLoaded',
+        () => {
+          watch.disconnect();
+          resolve();
+        },
+        { once: true },
+      );
+    });
 
     void (async () => {
       const deco = new Decorations();

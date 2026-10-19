@@ -48,9 +48,11 @@ What REScue provides:
   with rank numbers, small thumbnails, blue titles with (domain), old taglines, the flat
   "comments share save hide report" row, sort tabs, green pinned posts and old comment heads. Every
   vote and button press goes through Reddit's own controls.
-- **Filters.** Hide posts by keyword, subreddit, domain, user, flair or NSFW, with a banner showing
-  what was hidden and a way to reveal it. Optionally hide promoted posts and "Suggested
-  communities".
+- **Filters.** Hide posts by keyword, subreddit, domain, user, flair or NSFW, and collapse or hide
+  comments by keyword, user, score or depth, with a banner showing what was hidden and a way to
+  reveal it. Optionally hide promoted posts and "Suggested communities".
+- **Low-effort reply filter** (on by default, can be switched off). Replies that only agree, such
+  as "This!", "100%", "I agree" or "Exactly", are collapsed; the replies under them stay visible.
 - **Neutrality filter** (opt-in). A chip on news links shows who shares the domain, from blue
   (left-leaning audience) to red (right-leaning audience). You can also hide domains at the far
   ends, with separate strictness for each side. Scores come from two bundled, CC0-licensed
@@ -92,17 +94,18 @@ Add user-selectable reading, filtering and navigation tools to Reddit's website 
 
 ## Permissions justification
 
-| Permission                                                                     | Why                                                                                                                                                                                                   |
-| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `storage`                                                                      | Keeps your settings, tags, filters, saved comments and read history in the browser's extension storage on this device. With sync turned on, the settings profile is mirrored to browser sync storage. |
-| `unlimitedStorage`                                                             | Tag, filter and read-history lists can grow large over years of use; this stops the browser from evicting them. Nothing is stored remotely.                                                           |
-| Host access: `*://www.reddit.com/*`, `*://reddit.com/*`, `*://sh.reddit.com/*` | The tools run on, and only on, these Reddit pages. No other site is accessed.                                                                                                                         |
-| `declarativeNetRequest` (Chrome, optional) / `declarativeNetRequestWithHostAccess` (Firefox) | Only for "Block media downloads" (Hide inline media): stops Reddit's media files from downloading. Chrome asks when the option is turned on; Firefox's variant can only act on hosts the user also granted. |
-| Optional host access: `*://*.redd.it/*` | Asked for only when "Block media downloads" is turned on, so the rule above can apply to Reddit's media host. |
+| Permission                                                                                   | Why                                                                                                                                                                                                                                                                                    |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`                                                                                    | Keeps your settings, tags, filters, saved comments and read history in the browser's extension storage on this device. With sync turned on, the settings profile is mirrored to browser sync storage.                                                                                  |
+| `unlimitedStorage`                                                                           | Tag, filter and read-history lists can grow large over years of use; this stops the browser from evicting them. Nothing is stored remotely.                                                                                                                                            |
+| Host access: `*://www.reddit.com/*`, `*://reddit.com/*`, `*://sh.reddit.com/*`               | The tools run on, and only on, these Reddit pages. No other site is accessed.                                                                                                                                                                                                          |
+| `declarativeNetRequest` (Chrome, optional) / `declarativeNetRequestWithHostAccess` (Firefox) | Only for "Block media downloads" (Hide inline media): stops Reddit's media files from downloading. Chrome asks when the option is turned on; Firefox's variant can only act on hosts the user also granted.                                                                            |
+| `scripting`                                                                                  | If a Reddit tab finishes loading without REScue running in it (seen in some Firefox builds when a page is opened directly), the background starts REScue's own packaged content scripts in that tab. It runs only on the Reddit pages above and never injects code from anywhere else. |
+| Optional host access: `*://*.redd.it/*`                                                      | Asked for only when "Block media downloads" is turned on, so the rule above can apply to Reddit's media host.                                                                                                                                                                          |
 
 Not requested: `tabs` (the background worker opens link tabs through the tab-creation call, which
-needs no permission), `activeTab`, `cookies`, `webRequest`, `history`, `identity`, `scripting`, any
-optional or external host. Not used: remote code, `eval`, analytics SDKs. All code ships in the
+needs no permission), `activeTab`, `cookies`, `webRequest`, `history`, `identity`, any optional or
+external host. Not used: remote code, `eval`, analytics SDKs. All code ships in the
 package.
 
 Also declared: a small content script on `old.reddit.com` that moves you to the same page on
@@ -137,8 +140,9 @@ that is not marked working (✓) there.
 
 - Icons: done (`public/icon/`, from `docs/brand/icon.svg`). The 128 px file doubles as the store
   icon.
-- Screenshots (1280x800 or 640x400) of the Old Reddit look, filters, keyboard help and settings
-  console, taken on a real Reddit page by a person, with no personal account details visible.
+- Screenshots: done. `docs/screenshots/store/*-1280x800.png` (Old Reddit look feed and thread,
+  keyboard help, Reddit's own layout with REScue), taken signed out with names de-identified.
+  Chrome takes up to five; AMO accepts the same files.
 - The privacy policy published at a URL:
   https://github.com/BaconWappedBitcoin/REScue/blob/main/PRIVACY.md once the repository is public.
 - Developer accounts: the Chrome Web Store (one-time registration fee) and addons.mozilla.org

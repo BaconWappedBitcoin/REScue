@@ -176,7 +176,7 @@ export const subredditManager = defineModule({
   category: 'appearance',
   title: 'Subreddit shortcut bar',
   description:
-    'A slim bar in the bottom-left corner with your chosen subreddits and links, in your order. Hover a link to edit or delete it (or right-click it), press + to add one, drag links to reorder them or onto the delete zone, or sort them. A group such as a+b lists its subreddits when you hover it. On a subreddit page a “+ r/name” button adds it, and removes it when it is already there. The “my subreddits” word lists your subscriptions, with a search box, and can add the ones you tick to the bar. It reads them from Reddit (one read-only request per page of 100, only when you press it, kept for about an hour); signed out it is disabled.',
+    'A slim bar in the bottom-left corner with your chosen subreddits and links, in your order. Hover a link to edit or delete it (or right-click it), press + to add one, drag links to reorder them or onto the delete zone, or sort them. A group such as a+b lists its subreddits when you hover it. On a subreddit page a “+shortcut” button adds it, and “−shortcut” removes it. The “my subreddits” word lists your subscriptions, with a search box, and can add the ones you tick to the bar. It reads them from Reddit (one read-only request per page of 100, only when you press it, kept for about an hour); signed out it is disabled.',
   enabledByDefault: false,
   options: {
     subreddits: {
@@ -225,7 +225,7 @@ export const subredditManager = defineModule({
     showAddCurrent: {
       type: 'boolean',
       default: true,
-      title: 'Show a “+ r/name” / “− r/name” button on subreddit pages',
+      title: 'Show a “+shortcut” / “−shortcut” button on subreddit pages',
     },
     shortcutsPerAccount: {
       type: 'boolean',

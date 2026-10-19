@@ -76,6 +76,10 @@ export function createRegistry(deps: RegistryDeps): Registry {
         const e = entries.get(id);
         return !!e && deps.isEnabled(e.def);
       };
+      // Every init starts in order, but none waits for the one before it to finish its storage
+      // reads: run one after another they held the page back (the old look keeps posts hidden
+      // until this is done) by up to a second on a busy thread.
+      const pending: Array<Promise<void>> = [];
       for (const e of entries.values()) {
         if (!deps.isEnabled(e.def)) continue;
         const missing = (e.def.dependsOn ?? []).filter((d) => !active(d));
@@ -86,13 +90,17 @@ export function createRegistry(deps: RegistryDeps): Registry {
         }
         e.status = 'ok';
         e.ctx = deps.makeContext(e.def);
-        try {
-          await e.def.init?.(e.ctx);
-        } catch (err) {
+        const failed = (err: unknown) => {
           console.error(`[REScue] ${e.def.id}.init failed`, err);
           disable(e, 'it failed to start');
+        };
+        try {
+          pending.push(Promise.resolve(e.def.init?.(e.ctx)).catch(failed));
+        } catch (err) {
+          failed(err);
         }
       }
+      await Promise.all(pending);
     },
 
     items(batch) {

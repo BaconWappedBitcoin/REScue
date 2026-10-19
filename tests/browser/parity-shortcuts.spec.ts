@@ -185,15 +185,15 @@ test('dragging onto the delete zone removes a shortcut; the editor popup can too
 test('the + r/name button on a subreddit page is a toggle', async () => {
   const page = await open(dated('aww'));
   const toggle = bar(page).locator('[data-rescue-toggle]');
-  await expect(toggle).toHaveText('+ r/programming');
+  await expect(toggle).toHaveText('+shortcut');
   await toggle.click();
   await expect(links(page)).toHaveText(['aww', 'programming']);
-  await expect(toggle).toHaveText('− r/programming');
+  await expect(toggle).toHaveText('−shortcut');
   await expect.poll(targets).toEqual(['aww', 'r/programming']);
 
   await toggle.click();
   await expect(links(page)).toHaveText(['aww']);
-  await expect(toggle).toHaveText('+ r/programming');
+  await expect(toggle).toHaveText('+shortcut');
   await expect.poll(targets).toEqual(['aww']);
 });
 

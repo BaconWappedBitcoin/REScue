@@ -248,7 +248,7 @@ describe('subredditManager', () => {
       options: { subredditManager: { showDefaults: false } },
     });
     const add = document.querySelector('#rescue-subreddit-bar [data-rescue-toggle]');
-    expect(add?.textContent).toBe('+ r/pics');
+    expect(add?.textContent).toBe('+shortcut');
     m.dispose();
     const again = await bootModules([subredditManager], {
       route: { kind: 'subreddit', path: '/r/pics', subreddit: 'pics' },
@@ -258,7 +258,7 @@ describe('subredditManager', () => {
     });
     // Already there: the same button now removes it.
     expect(document.querySelector('#rescue-subreddit-bar [data-rescue-toggle]')?.textContent).toBe(
-      '− r/pics',
+      '−shortcut',
     );
     again.dispose();
   });

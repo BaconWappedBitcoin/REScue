@@ -8,9 +8,31 @@ import type { Session } from './types';
 
 const USERNAME = /^[A-Za-z0-9_-]{3,20}$/;
 
+/**
+ * Is enough of the page there to start REScue before Reddit has finished sending it? The header,
+ * the signed-in state (and, signed in, the name) and the first post or feed must all be in.
+ */
+export function pageStartable(doc: Document = document): boolean {
+  const S = C.session;
+  const app = doc.querySelector(C.app);
+  const state = app?.getAttribute(S.loggedInAttr);
+  if (!doc.body || !doc.querySelector(C.header) || (state !== 'true' && state !== 'false'))
+    return false;
+  if (
+    state === 'true' &&
+    !doc.querySelector(S.currentUser) &&
+    !doc.querySelector(S.usernameAttrSel)
+  )
+    return false;
+  return !!doc.querySelector(`${C.feed}, ${C.post}, ${C.comment}`);
+}
+
 export function readSession(doc: Document = document): Session {
   const S = C.session;
-  let username = doc.querySelector(S.usernameAttrSel)?.getAttribute(S.usernameAttr) ?? null;
+  let username =
+    doc.querySelector(S.usernameAttrSel)?.getAttribute(S.usernameAttr) ??
+    doc.querySelector(S.currentUser)?.getAttribute(S.currentUserAttr) ??
+    null;
   if (!username) {
     for (const a of doc.querySelectorAll(S.usernameLinks)) {
       const m = /\/user\/([^/?#]+)/.exec(a.getAttribute('href') ?? '');

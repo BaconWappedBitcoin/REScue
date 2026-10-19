@@ -325,7 +325,7 @@ function toggleButton(sub: string): HTMLElement {
       'data-rescue-toggle': present ? 'remove' : 'add',
       title: hint.shortcutToggle(sub, present),
     },
-    `${present ? '−' : '+'} r/${sub}`,
+    present ? '−shortcut' : '+shortcut',
   );
   b.addEventListener('click', () =>
     commit(present ? removeSubreddit(rows(), sub) : addRow(rows(), `r/${sub}`, '', Date.now())),
