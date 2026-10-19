@@ -1,0 +1,9 @@
+node_modules/
+.output/
+.wxt/
+coverage/
+package-lock.json
+specs/
+.specify/
+.claude/
+tests/fixtures/captured/

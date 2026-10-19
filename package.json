@@ -1,0 +1,57 @@
+{
+  "name": "rescue",
+  "description": "REScue: Reddit Enhancement Suite features for modern Reddit and sh.reddit.com",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/BaconWappedBitcoin/REScue#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BaconWappedBitcoin/REScue.git"
+  },
+  "bugs": {
+    "url": "https://github.com/BaconWappedBitcoin/REScue/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox --mv3",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox --mv3",
+    "zip": "wxt zip && wxt zip -b firefox --mv3",
+    "postinstall": "wxt prepare",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:mutate": "node --experimental-strip-types tests/mutate.ts",
+    "test:browser": "npm run build && playwright test",
+    "verify:live": "playwright test --config tests/live/playwright.live.config.ts verify-contracts",
+    "smoke:live": "npm run build && playwright test --config tests/live/playwright.live.config.ts smoke-extension",
+    "capture:live": "node --experimental-strip-types tests/live/capture.ts",
+    "smoke:firefox": "npm run build:firefox && node --experimental-strip-types tests/live/firefox-smoke.ts"
+  },
+  "dependencies": {
+    "preact": "^10.29.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
+    "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^26.6.5",
+    "@types/selenium-webdriver": "^4.35.7",
+    "eslint": "^10.12.0",
+    "geckodriver": "^8.0.0",
+    "happy-dom": "^21.0.1",
+    "prettier": "^3.9.10",
+    "selenium-webdriver": "^4.51.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.5",
+    "wxt": "^0.21.4"
+  }
+}

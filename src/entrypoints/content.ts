@@ -1,0 +1,321 @@
+/**
+ * Isolated-world content script. REScue decorates Reddit's own layout and never replaces it.
+ * Order: settings -> session -> registry -> pipeline -> native adapter. A startup failure logs a
+ * notice and leaves Reddit's page exactly as it is (constitution Principle III).
+ */
+import { sweepOwn, takeOver, type Instance } from '../core/instance';
+import { isTabDisabled, showDisabledNotice } from '../core/tabDisable';
+import { ensureTheme } from '../core/theme';
+import { BridgeClient } from '../core/bridge-client';
+import { createActionApi } from '../core/actions';
+import { createNotices } from '../core/notices';
+import { Pipeline } from '../core/pipeline';
+import { createRegistry } from '../core/registry';
+import { classify, watchRoute } from '../core/route';
+import {
+  isModuleEnabled,
+  loadProfile,
+  mergeProfileChange,
+  normalizeProfile,
+  resolveOptions,
+  type SettingsProfile,
+} from '../core/settings';
+import { LocalStore, STORAGE_KEYS } from '../core/storage/store';
+import type { ModuleContext, ModuleUi, SettingsApi, SharedData } from '../core/types';
+import { KeyDispatcher } from '../core/keys';
+import { Decorations } from '../layout/decorations';
+import { NativeAdapter } from '../layout/native/adapter';
+import { Selection } from '../layout/native/selection';
+import { createToolbar } from '../layout/native/toolbar';
+import { readSession, watchSession } from '../model/session';
+import { MODULES } from '../modules';
+import {
+  applyEarlyCommentMedia,
+  clearEarlyCommentMedia,
+} from '../modules/listings/inlineMedia/earlyStyle';
+import { applyEarlySkin, clearEarlySkin } from '../modules/appearance/oldSkin/early';
+import { SKIN_STYLE_ID } from '../modules/appearance/oldRedditSkin';
+import { applyEarlyFrontSort } from '../modules/appearance/logoLink';
+import { readNoticePrefs, withMutedTypes } from '../modules/core/noticeSettings';
+
+const FROM_OLD_PARAM = 'rescue_from_old';
+const PERF_ATTR = 'data-rescue-perf';
+const PERF_PREFIX = '[REScue:perf]';
+
+export default defineContentScript({
+  matches: ['*://www.reddit.com/*', '*://reddit.com/*', '*://sh.reddit.com/*'],
+  excludeMatches: ['*://*.reddit.com/media*'],
+  runAt: 'document_start',
+  main() {
+    // Logo link › "Front page sort": a bare front page opens with the chosen sort at once.
+    if (applyEarlyFrontSort(location.href)) return;
+    // Troubleshooter › "Disable REScue in this tab": leave the page exactly as Reddit made it.
+    if (isTabDisabled()) {
+      showDisabledNotice();
+      return;
+    }
+    // The newest REScue on the page wins: an older instance (the add-on was reloaded while this
+    // tab stayed open) tears itself down, so no post ever shows two sets of controls.
+    const disposers: Array<() => void> = [];
+    /** Run `fn` when a newer instance takes over (at once if it already has). */
+    const onDispose = (fn: () => void): void => {
+      if (instance.alive()) disposers.push(fn);
+      else fn();
+    };
+    const instance: Instance = takeOver(() => {
+      for (const fn of disposers.splice(0).reverse()) {
+        try {
+          fn();
+        } catch {
+          /* already gone */
+        }
+      }
+      sweepOwn(instance.token);
+    });
+    const notices = createNotices();
+    let route = classify(location.href);
+    // Comment media the reader chose to hide is hidden from the first paint (earlyStyle.ts).
+    applyEarlyCommentMedia(location.href);
+    // The Old Reddit look, likewise, from the first paint (oldSkin/early.ts).
+    applyEarlySkin(location.href);
+
+    const domReady = new Promise<void>((resolve) =>
+      document.readyState === 'loading'
+        ? document.addEventListener('DOMContentLoaded', () => resolve(), { once: true })
+        : resolve(),
+    );
+
+    void (async () => {
+      const deco = new Decorations();
+      const bridge = new BridgeClient();
+      const native = new NativeAdapter(deco);
+      const selection = new Selection();
+      deco.onChange(() => selection.refresh());
+      const toolbar = createToolbar();
+      ensureTheme(); // REScue's colours, following Reddit's light or dark mode
+      const keys = new KeyDispatcher();
+      try {
+        const store = new LocalStore();
+        let profile: SettingsProfile = await loadProfile(store);
+        let session = readSession();
+        const actions = createActionApi({ bridge, session: () => session });
+
+        const ui: ModuleUi = {
+          hide: (i, r) => deco.hide(i, r),
+          unhide: (i, r) => deco.unhide(i, r),
+          collapseBody: (i, on) => deco.collapseBody(i, on),
+          markAuthor: (i, c) => deco.markAuthor(i, c),
+          unmarkAuthor: (i, c) => deco.unmarkAuthor(i, c),
+          decorate: (i, s, n) => deco.decorate(i, s, n),
+          addClass: (i, c) => deco.addClass(i, c),
+          addHeaderTool: (n) => toolbar.addHeaderTool(n),
+          addBanner: (n) => toolbar.addBanner(n),
+          addMenuItem: (item) => toolbar.addMenuItem(item),
+          openMenu: (anchor) => toolbar.openMenu(anchor),
+          setRevealHidden: (on) => deco.setReveal(on),
+          selection: () => selection,
+        };
+
+        const data: SharedData = {
+          get: (key) => store.get(key),
+          set: (key, value) => store.set(key, value),
+        };
+        const contexts = new Map<string, ModuleContext>();
+        let saveSeq = 0;
+        let saveQueue: Promise<void> = Promise.resolve();
+        const settings: SettingsApi = {
+          profile: () => profile,
+          async save(next, base = profile) {
+            profile = next; // later callers build on this at once
+            const mine = ++saveSeq;
+            const run = async (): Promise<void> => {
+              // Re-read storage right before writing: only this change is applied to it.
+              const stored = normalizeProfile(
+                (await browser.storage.local.get(STORAGE_KEYS.settings))[STORAGE_KEYS.settings],
+              );
+              const merged = mergeProfileChange(stored, normalizeProfile(base), next);
+              // Written immediately (not debounced): the console reports "saved" only after this.
+              await browser.storage.local.set({ [STORAGE_KEYS.settings]: merged });
+              if (mine === saveSeq) profile = merged;
+              void browser.runtime.sendMessage({ type: 'settings.changed' }).catch(() => {});
+            };
+            const turn = saveQueue.then(run, run);
+            saveQueue = turn.catch(() => undefined);
+            return turn;
+          },
+          definitions: () => MODULES,
+          status: (id) => registry.status(id),
+          report: () => registry.report(),
+          async runAction(moduleId, actionId, file) {
+            const def = MODULES.find((d) => d.id === moduleId);
+            const action = def?.actions?.find((a) => a.id === actionId);
+            if (!def || !action) return;
+            // A module that is off still exposes its actions (e.g. export while disabled).
+            const ctx: ModuleContext = contexts.get(moduleId) ?? {
+              moduleId,
+              route,
+              session,
+              store: store.scoped(moduleId),
+              data,
+              notices,
+              ui,
+              keys,
+              bridge,
+              actions,
+              settings,
+              options: resolveOptions(def, profile),
+            };
+            try {
+              await action.run(ctx, file);
+            } catch (err) {
+              console.error(`[REScue] ${moduleId}.${actionId} failed`, err);
+              notices.show(`REScue: “${action.label}” failed.`, { kind: 'error' });
+            }
+          },
+        };
+
+        notices.configure({
+          muted: () => readNoticePrefs(profile).mutedTypes,
+          setMuted: (next) => void settings.save(withMutedTypes(profile, next)),
+          closeDelayMs: () => readNoticePrefs(profile).closeDelaySeconds * 1000,
+          fadeOutMs: () => readNoticePrefs(profile).fadeOutSeconds * 1000,
+          moduleTitle: (id) => MODULES.find((d) => d.id === id)?.title,
+        });
+
+        const registry = createRegistry({
+          isEnabled: (def) => def.locked === true || isModuleEnabled(def, profile),
+          notify: (m) => notices.show(m, { kind: 'warning' }),
+          reloadNeeded: (def, enabled) =>
+            notices.show(
+              `REScue: reload this page to finish turning “${def.title}” ${enabled ? 'on' : 'off'}.`,
+              {
+                id: 'reload-needed',
+                kind: 'warning',
+                actions: [{ label: 'Reload', run: () => location.reload() }],
+              },
+            ),
+          makeContext: (def): ModuleContext => {
+            const ctx: ModuleContext = {
+              moduleId: def.id,
+              route,
+              session,
+              store: store.scoped(def.id),
+              data,
+              notices,
+              ui,
+              keys,
+              bridge,
+              actions,
+              settings,
+              options: resolveOptions(def, profile, (id, opt) =>
+                notices.show(`REScue: invalid setting ${id}.${opt} was reset to its default.`, {
+                  kind: 'warning',
+                }),
+              ),
+            };
+            contexts.set(def.id, ctx);
+            return ctx;
+          },
+        });
+        for (const def of MODULES) registry.register(def);
+
+        await domReady;
+        session = readSession();
+        if (new URLSearchParams(location.search).has(FROM_OLD_PARAM)) {
+          const u = new URL(location.href);
+          u.searchParams.delete(FROM_OLD_PARAM);
+          history.replaceState(history.state, '', u.href);
+          notices.show(
+            'REScue opened this old.reddit link on Reddit’s current site, because old.reddit now asks for an account.',
+            { id: 'from-old', timeoutMs: 8000 },
+          );
+        }
+
+        await registry.start();
+        // The module's own stylesheet has taken over (or the module is off): drop the early one.
+        clearEarlyCommentMedia();
+        clearEarlySkin(SKIN_STYLE_ID);
+        onDispose(keys.attach(window));
+        onDispose(() => registry.stop());
+        onDispose(() => deco.clear());
+        onDispose(() => native.stop());
+
+        const pipeline = new Pipeline({
+          onBatch(batch) {
+            registry.items(batch);
+            native.track(batch);
+            selection.track(batch);
+          },
+          // Performance tests set this attribute on <html>; nothing is emitted otherwise.
+          onTiming(ms, batch, startedAt) {
+            if (!document.documentElement.hasAttribute(PERF_ATTR)) return;
+            console.debug(
+              PERF_PREFIX,
+              JSON.stringify({
+                ms,
+                startedAt,
+                posts: batch.posts.length,
+                comments: batch.comments.length,
+              }),
+            );
+          },
+        });
+        pipeline.start();
+        onDispose(() => pipeline.stop());
+        pipeline.flush();
+        // Everything above is running and the first batch is tracked: a stable signal for tests
+        // (and any other observer) to wait on instead of guessing a delay. Set only after the
+        // modules have started, the keys are attached and the page's items have been consumed.
+        document.documentElement.setAttribute('data-rescue-ready', '1');
+        setTimeout(() => registry.checkHealth(), 3000);
+
+        onDispose(
+          watchSession((s) => {
+            session = s;
+          }),
+        );
+        onDispose(
+          watchRoute((next) => {
+            route = next;
+            pipeline.reset();
+            native.reset();
+            selection.reset();
+            deco.clear();
+            registry.route(route);
+            pipeline.flush();
+          }),
+        );
+
+        const onMessage = (msg: unknown) => {
+          if (!instance.alive()) return undefined;
+          if ((msg as { type?: string })?.type === 'settings.changed') {
+            void loadProfile(store).then(async (p) => {
+              profile = p;
+              await registry.settingsChanged();
+              // Modules that changed options (or were switched on/off) need a chance to decorate
+              // the posts already on the page. The pipeline skips items marked seen, so reset the
+              // marks and re-run one batch. Decorations.replace keeps duplicates from appearing.
+              pipeline.reset();
+              pipeline.flush();
+            });
+          }
+          return undefined;
+        };
+        browser.runtime.onMessage.addListener(onMessage);
+        onDispose(() => browser.runtime.onMessage.removeListener(onMessage));
+        addEventListener('pagehide', () => {
+          if (!instance.alive()) return;
+          void store.flush();
+          void browser.runtime
+            .sendMessage({ type: 'health.report', report: registry.report() })
+            .catch(() => {});
+        });
+      } catch (err) {
+        clearEarlyCommentMedia();
+        clearEarlySkin(SKIN_STYLE_ID);
+        console.error('[REScue] startup failed', err);
+        notices.show('REScue failed to start; Reddit is unchanged.', { kind: 'error' });
+      }
+    })();
+  },
+});

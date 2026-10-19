@@ -1,0 +1,63 @@
+/**
+ * What the About module says after REScue was updated (RES onboarding: updateNotification,
+ * patchUpdateNotification) and the tips it shows (RES RESTips: menuItem, newFeatureTips). Pure
+ * functions on version strings and text; the module remembers the last version it saw in its own
+ * scoped storage, on this device only. Ideas from RES lib/modules/onboarding.js and RESTips.js
+ * (GPL-3.0, the RES contributors, commit 4defffc); the code is new.
+ */
+
+export type UpdateKind = 'major' | 'minor' | 'patch' | 'none';
+
+const parts = (v: string): [number, number, number] | null => {
+  const m = /^(\d+)\.(\d+)\.(\d+)/.exec(v.trim());
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+};
+
+/** 1 when `a` is newer than `b`, -1 when older, 0 when equal or not comparable. */
+export function compareVersions(a: string, b: string): number {
+  const x = parts(a);
+  const y = parts(b);
+  if (!x || !y) return 0;
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i]! > y[i]! ? 1 : -1;
+  return 0;
+}
+
+/** How big the step from `from` to `to` is; 'none' when it is not an upgrade. */
+export function updateKind(from: string, to: string): UpdateKind {
+  if (compareVersions(to, from) <= 0) return 'none';
+  const a = parts(from)!;
+  const b = parts(to)!;
+  if (a[0] !== b[0]) return 'major';
+  return a[1] !== b[1] ? 'minor' : 'patch';
+}
+
+/** Tips that explain how to use REScue. */
+export const TIPS = [
+  'Add #rescue:settings/<feature> to any Reddit address to jump straight to that feature’s settings.',
+  'Export a backup from Core › Backup & restore before trying big changes.',
+  'Press . to open the REScue command line: go to a subreddit or user, search, or change a setting.',
+  'The REScue menu (the “REScue” word in the corner) holds quick switches for the features that have one.',
+  'Hover any REScue word or button to see what it does.',
+];
+
+/** A tip for a feature, shown once to people updating from a version older than `since`. */
+export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
+  {
+    since: '0.1.0',
+    text: 'The shortcut bar can sort by “Last visited”, keep a list per account, and the REScue menu has a Dashboard of link cards.',
+  },
+  {
+    since: '0.1.0',
+    text: 'Feed pausing now remembers your choice, marks “Page 2” and tells you when the feed ends.',
+  },
+];
+
+/** The new-feature tips an update from `from` to `to` brings. */
+export function newFeatureTips(from: string, to: string): string[] {
+  return NEW_FEATURE_TIPS.filter(
+    (t) => compareVersions(t.since, from) > 0 && compareVersions(t.since, to) <= 0,
+  ).map((t) => t.text);
+}
+
+export const randomTip = (pick: () => number = Math.random): string =>
+  TIPS[Math.floor(pick() * TIPS.length)]!;

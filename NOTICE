@@ -1,0 +1,38 @@
+REScue
+Copyright (C) 2026 REScue contributors
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version. See LICENSE.
+
+REScue ports ideas and, where marked in file headers, code from:
+
+- Reddit Enhancement Suite (RES)
+  https://github.com/honestbleeps/Reddit-Enhancement-Suite
+  Copyright (C) the Reddit Enhancement Suite contributors. GPL-3.0.
+  Referenced at commit 4defffc12235b86b50e458d9f3565c96376609ec.
+
+- Sheddit
+  https://github.com/kookaburrabarrel/sheddit
+  Copyright (C) 2026 kookaburrabarrel. GPL-3.0.
+  Referenced at commit cff40d7c33df234bcef1bd40f7590962252493c8.
+
+Every file that ports logic from either project names the upstream file in its header.
+
+REScue bundles two third-party datasets, merged into one file (src/data/neutrality-scores.json,
+used by the neutrality filter):
+
+- News Sharing on Social Media: Mapping the Ideology of News Media, Politicians, and the Mass Public
+  Gregory Eady, Richard Bonneau, Joshua A. Tucker and Jonathan Nagler.
+  Political Analysis 33(2), 2025, doi:10.1017/pan.2024.19. Replication data on Harvard Dataverse,
+  doi:10.7910/DVN/1QMLOV, file News_Domain_Media_Scores.csv. Licence: CC0 1.0.
+  Only the "domain" and "zeta" columns are used. Scores for about 180 major outlets, from
+  politicians' news sharing 2017-2020, are mapped onto the scale below with a linear fit and
+  replace the 2018 scores for those domains.
+
+- Partisan Bias Scores for Web Domains (2018)
+  Ronald E. Robertson, Shan Jiang, Kenneth Joseph, Lisa Friedland, David Lazer and Christo Wilson.
+  Harvard Dataverse, doi:10.7910/DVN/QAN5VX, file 3316961 (bias_scores.tab). Licence: CC0 1.0.
+  Only the "domain" and "score" columns are used. The score is the authors' audience-partisanship
+  measure from a 2017 Twitter panel: it shows who shares a domain, not a judgement of its content.
+  Regenerate with: node --experimental-strip-types scripts/build-neutrality-data.ts [bias_scores.tab] [News_Domain_Media_Scores.csv]

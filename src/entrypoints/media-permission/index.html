@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>REScue: allow media blocking</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font:
+          14px/1.5 system-ui,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+      }
+      h1 {
+        font-size: 17px;
+        margin: 0 0 12px;
+      }
+      button {
+        font: inherit;
+        padding: 6px 14px;
+        margin-right: 8px;
+        cursor: pointer;
+      }
+      #result {
+        margin-top: 14px;
+        min-height: 1.5em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Block media downloads?</h1>
+    <p>
+      You turned on <b>Block media downloads</b> in REScue. While Reddit's media is hidden, REScue
+      can also stop your browser from downloading it, which saves data.
+    </p>
+    <p>
+      To do that the browser needs your permission to block requests to Reddit's media servers
+      (<code>*.redd.it</code>). REScue only blocks; it does not read, copy or send anything.
+    </p>
+    <p>
+      <button id="allow" type="button">Allow</button>
+      <button id="cancel" type="button">Not now</button>
+    </p>
+    <div id="result" role="status"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
