@@ -21,7 +21,12 @@ import {
 } from '../../src/modules/appearance/oldRedditSkin';
 import { quickToggles } from '../../src/modules/core/quickToggles';
 import { bootModules } from './module-harness';
-import { applyEarlySkin, clearEarlySkin, EARLY_SKIN_ID, writeSkinMirror } from '../../src/modules/appearance/oldSkin/early';
+import {
+  applyEarlySkin,
+  clearEarlySkin,
+  EARLY_SKIN_ID,
+  writeSkinMirror,
+} from '../../src/modules/appearance/oldSkin/early';
 import { HighlightRows, readHighlights } from '../../src/modules/appearance/oldSkin/highlights';
 import { MARK as PROMOTED_MARK } from '../../src/modules/listings/hidePromoted/hider';
 import { hostSlot, slotPieces } from '../../src/modules/appearance/oldSkin/shared';
@@ -215,7 +220,9 @@ describe('second pass: REScue-drawn rows (R24)', () => {
   });
 
   it('styles the tabs, the top strip and the sidebar boxes', () => {
-    expect(css).toContain('shreddit-sort-dropdown[sort-event="feed-sort-change"][data-rescue-tabs]');
+    expect(css).toContain(
+      'shreddit-sort-dropdown[sort-event="feed-sort-change"][data-rescue-tabs]',
+    );
     expect(css).toContain('.rescue-otab.rescue-oon');
     expect(css).toContain('#rescue-subreddit-bar { position: fixed; top: 0');
     expect(css).toContain('#right-sidebar-container aside');
@@ -291,7 +298,9 @@ describe('the look from the first paint', () => {
 
   it('veils items without REScue rows, with a timed reveal', () => {
     const css = oldSkinCss(opts);
-    expect(css).toMatch(/:not\(\[data-rescue-ov\]\)[^{]*\{ visibility: hidden; animation: rescue-os-reveal 0s linear 3000ms forwards; \}/);
+    expect(css).toMatch(
+      /:not\(\[data-rescue-ov\]\)[^{]*\{ visibility: hidden; animation: rescue-os-reveal 0s linear 3000ms forwards; \}/,
+    );
   });
 });
 
@@ -305,6 +314,26 @@ describe('videos in feeds', () => {
 });
 
 describe('pinned posts (community highlights)', () => {
+  it('reads a flair label and the card picture (r/GenX shape), and only safe image hosts', () => {
+    document.body.innerHTML = `<community-highlight-carousel><li><a href="/r/GenX/comments/c3/x/"><community-highlight-card src="https://preview.redd.it/abc.jpg?width=640">
+      <h2 slot="title">Colonoscopy Megathread</h2>
+      <span slot="label"><span style="background-color: #D94A38;"><div aria-label="Flair: Health &amp; Science">Health &amp; Science</div></span></span>
+      <span slot="upvotes-and-comments"><span><faceplate-number number="1065">1.1K</faceplate-number> votes • <faceplate-number number="659">659</faceplate-number> comments</span></span>
+    </community-highlight-card></a></li><li><a href="/r/GenX/comments/d4/x/"><community-highlight-card src="https://evil.example/x.png"><h2 slot="title">Other</h2><span slot="label"><span>Megathread</span></span></community-highlight-card></a></li></community-highlight-carousel>`;
+    const [a, b] = readHighlights(document.querySelector('community-highlight-carousel')!);
+    expect(a).toMatchObject({
+      author: null,
+      label: {
+        text: 'Health & Science',
+        bg: expect.stringMatching(/^(#d94a38|rgb\(217, 74, 56\))$/i),
+      },
+      image: 'https://preview.redd.it/abc.jpg?width=640',
+      score: 1065,
+      comments: 659,
+    });
+    expect(b).toMatchObject({ label: { text: 'Megathread', bg: null }, image: null, score: null });
+  });
+
   const card = (id: string, title: string, votes: number, comments: number) => `
     <li><a href="/r/moderatepolitics/comments/${id}/x/"><community-highlight-card>
       <h2 slot="title">${title}</h2>
@@ -317,8 +346,24 @@ describe('pinned posts (community highlights)', () => {
     document.body.innerHTML = `<main id="main-content"><community-highlight-carousel><shreddit-gallery-carousel>${card('a1', '!clear', 4, 0)}${card('b2', 'Weekly thread', 1200, 37)}</shreddit-gallery-carousel></community-highlight-carousel></main>`;
     const carousel = document.querySelector('community-highlight-carousel')!;
     expect(readHighlights(carousel)).toEqual([
-      { href: '/r/moderatepolitics/comments/a1/x/', title: '!clear', author: 'AutoModerator', score: 4, comments: 0 },
-      { href: '/r/moderatepolitics/comments/b2/x/', title: 'Weekly thread', author: 'AutoModerator', score: 1200, comments: 37 },
+      {
+        href: '/r/moderatepolitics/comments/a1/x/',
+        title: '!clear',
+        author: 'AutoModerator',
+        label: null,
+        image: null,
+        score: 4,
+        comments: 0,
+      },
+      {
+        href: '/r/moderatepolitics/comments/b2/x/',
+        title: 'Weekly thread',
+        author: 'AutoModerator',
+        label: null,
+        image: null,
+        score: 1200,
+        comments: 37,
+      },
     ]);
     const rows = new HighlightRows();
     rows.sync();
@@ -326,6 +371,9 @@ describe('pinned posts (community highlights)', () => {
     expect(carousel.hasAttribute('data-rescue-hl')).toBe(true);
     rows.sync();
     expect(document.querySelectorAll('.rescue-osticky')).toHaveLength(1);
+    expect(document.querySelector('.rescue-ostick .rescue-oauthor')?.textContent).toBe(
+      'AutoModerator',
+    );
     rows.clear();
     expect(document.querySelector('.rescue-osticky')).toBeNull();
     expect(carousel.hasAttribute('data-rescue-hl')).toBe(false);
@@ -334,14 +382,18 @@ describe('pinned posts (community highlights)', () => {
 
 describe('ads hidden by "Hide promoted posts"', () => {
   it('stay hidden under the row style, with the same marker the hider uses', () => {
-    expect(oldSkinCss(DEFAULTS)).toContain(`[data-rescue-ov][${PROMOTED_MARK}] { display: none !important; }`);
+    expect(oldSkinCss(DEFAULTS)).toContain(
+      `[data-rescue-ov][${PROMOTED_MARK}] { display: none !important; }`,
+    );
   });
 });
 
 describe('the "Post to" bar', () => {
   it('is hidden only inside the main column, so Reddit’s Create Post buttons stay', () => {
     const css = oldSkinCss(DEFAULTS);
-    expect(css).toContain('#main-content create-post-entry-point-wrapper { display: none !important; }');
+    expect(css).toContain(
+      '#main-content create-post-entry-point-wrapper { display: none !important; }',
+    );
     expect(css).not.toMatch(/"\] create-post-entry-point-wrapper \{/);
   });
 });

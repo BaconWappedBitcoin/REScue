@@ -67,6 +67,14 @@ export function feedCss(o: OldSkinOptions): string {
     `${P} > a[slot="full-post-link"] { pointer-events: none; }`,
     `${P}[${C.postFlagAttrs.stickied}] .rescue-otitle { color: var(--os-sticky); }`,
     `${scoped(P, '.rescue-hide-link')} { display: none; }`,
+    // Pinned posts (modules/appearance/oldSkin/highlights.ts): the feed's own columns, a green title.
+    `${ROOT} .rescue-osticky { margin: 2px 0 4px; }`,
+    `${ROOT} .rescue-ostick { display: grid; grid-template-columns: ${rankW}px 46px ${px}px minmax(0, 1fr); align-items: start; font-family: var(--os-font); font-size: 10px; color: var(--os-meta); }`,
+    `${ROOT} .rescue-ostick > .rescue-ostick-vote { grid-column: 2; display: flex; justify-content: center; padding-top: 18px; }`,
+    `${ROOT} .rescue-ostick > .rescue-oth { grid-column: 3; width: ${px}px; height: ${Math.round(px * 0.75)}px; ${none ? 'display: none;' : ''} }`,
+    `${ROOT} .rescue-ostick > .rescue-obody { grid-column: 4; padding-left: ${none ? 0 : 8}px; }`,
+    `${ROOT} .rescue-ostick-title { color: var(--os-sticky) !important; }`,
+    `${ROOT} .rescue-ostick-word { color: var(--os-sticky); font-weight: bold; }`,
     // An ad that "Hide promoted posts" hid stays hidden: this row style must not bring it back
     // (it outranks that module's display:none), or it leaves a blank, numbered gap.
     `${P}[${PROMOTED_MARK}] { display: none !important; }`,

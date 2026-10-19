@@ -22,14 +22,6 @@ export function chromeCss(): string {
     `${R} #${k.selectionBoxId} { border: 0 !important; border-left: 2px solid var(--os-head-line) !important; border-radius: 0 !important; box-shadow: none !important; background: color-mix(in srgb, var(--os-head) 35%, transparent) !important; }`,
     // Pinned posts: old Reddit's green stickied rows in place of Reddit's highlight cards.
     `${R} ${k.highlights.carousel}[${k.highlights.shownAttr}] { display: none !important; }`,
-    `${R} .rescue-osticky { margin: 2px 0 4px; }`,
-    `${R} .rescue-ostick { display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: start; padding: 3px 0; font: 10px/1.4 var(--os-font); color: var(--os-meta); }`,
-    `${R} .rescue-ostick-score { text-align: center; padding-top: 4px; font: bold 13px/1 var(--os-font); color: var(--os-arrow); }`,
-    `${R} .rescue-ostick-title { font: normal 16px/1.3 arial, sans-serif; color: var(--os-sticky) !important; text-decoration: none; }`,
-    `${R} .rescue-ostick-title:hover { text-decoration: underline; }`,
-    `${R} .rescue-ostick-word { color: var(--os-sticky); font-weight: bold; }`,
-    `${R} .rescue-ostick .rescue-oauthor { color: var(--os-tag); text-decoration: none; }`,
-    `${R} .rescue-ostick .rescue-ocomments { display: inline-block; margin-top: 1px; }`,
     // Sort tabs: old Reddit's "best / hot / new / rising / controversial / top" strip.
     `${R} ${k.feedSort}[${k.tabsAttr}] { display: none !important; }`,
     `${R} .rescue-otabs { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 3px; margin: 4px 0 2px; padding: 0 0 0 4px; border-bottom: 1px solid var(--os-head-line); font: bold 12px/1.3 var(--os-font); text-transform: lowercase; }`,

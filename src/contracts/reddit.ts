@@ -409,7 +409,9 @@ export const C = {
      * (r/moderatepolitics, LibreWolf): `community-highlight-carousel` > `shreddit-gallery-carousel`
      * > `li` > `a[href=/r/…/comments/…]` > `community-highlight-card` with light-DOM children
      * `[slot=title]` (the title), `[slot=label]` (avatar + "u/name") and
-     * `[slot=upvotes-and-comments]` (two `faceplate-number[number]`: votes, then comments).
+     * `[slot=upvotes-and-comments]` (two `faceplate-number[number]`: votes, then comments). The
+     * label is the author ("u/name") on some subreddits, a flair or a tag ("Megathread") on others
+     * (r/GenX, 2026-10-19). Cards carry no posting time.
      */
     highlights: {
       carousel: 'community-highlight-carousel',
@@ -419,6 +421,10 @@ export const C = {
       counts: '[slot="upvotes-and-comments"] faceplate-number',
       countAttr: 'number',
       shownAttr: 'data-rescue-hl',
+      /** The card's picture (a preview.redd.it address), when it has one. VERIFIED LIVE (r/GenX). */
+      imageAttr: 'src',
+      /** A label that is a flair (r/GenX: "Health & Science", with its background colour). */
+      flair: '[aria-label^="Flair"]',
     },
     /** The comment's action row wrapper in its grid (hidden while REScue's link row stands in). */
     commentActionBox: 'div:has(> [slot="actionRow"])',
