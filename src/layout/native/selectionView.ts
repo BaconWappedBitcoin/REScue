@@ -185,7 +185,14 @@ export function areaOf(item: SelectableItem): Box | null {
     : measurable(m)
       ? m.bottom
       : host.top + Math.min(host.height, FALLBACK_HEIGHT);
-  return { left: host.left, right: host.right, top, bottom: Math.max(bottom, top + 1) };
+  // Never past the comment itself: Firefox still measures a collapsed comment's hidden body at its
+  // full height (verified live 2026-10-19), which left the outline hanging over the next comments.
+  return {
+    left: host.left,
+    right: host.right,
+    top,
+    bottom: Math.max(Math.min(bottom, host.bottom), top + 1),
+  };
 }
 
 export class SelectionView {

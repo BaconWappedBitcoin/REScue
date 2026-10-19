@@ -96,15 +96,15 @@ describe('the stylesheet', () => {
   it('never leaves a stylesheet value behind from an unknown option', () => {
     const css = oldSkinCss({ ...DEFAULTS, thumbnails: 'bogus; } body { display: none' });
     expect(css).not.toContain('bogus');
-    expect(css).toContain('grid-template-columns: 34px 46px 70px');
+    expect(css).toContain('grid-template-columns: 34px 58px 70px');
     expect(thumbPx('bogus')).toBe(70);
   });
 
   it('sizes the thumbnail column from the option', () => {
-    expect(oldSkinCss({ ...DEFAULTS, thumbnails: 'small' })).toContain('34px 46px 50px minmax');
-    expect(oldSkinCss({ ...DEFAULTS, thumbnails: 'large' })).toContain('34px 46px 100px minmax');
+    expect(oldSkinCss({ ...DEFAULTS, thumbnails: 'small' })).toContain('34px 58px 50px minmax');
+    expect(oldSkinCss({ ...DEFAULTS, thumbnails: 'large' })).toContain('34px 58px 100px minmax');
     const none = oldSkinCss({ ...DEFAULTS, thumbnails: 'none' });
-    expect(none).toContain('34px 46px 0px minmax');
+    expect(none).toContain('34px 58px 0px minmax');
     expect(none).toContain('display: none;');
   });
 
@@ -112,7 +112,7 @@ describe('the stylesheet', () => {
     expect(oldSkinCss(DEFAULTS)).toContain('content: counter(osrank)');
     const off = oldSkinCss({ ...DEFAULTS, rankNumbers: false });
     expect(off).not.toContain('content: counter(osrank)');
-    expect(off).toContain('grid-template-columns: 0px 46px 70px');
+    expect(off).toContain('grid-template-columns: 0px 58px 70px');
   });
 
   it('hides the left navigation and the banner only when asked', () => {
@@ -175,7 +175,7 @@ describe('the module', () => {
     } as ModuleContext as never);
     const after = document.getElementById(SKIN_STYLE_ID)?.textContent ?? '';
     expect(after).not.toBe(before);
-    expect(after).toContain('34px 46px 100px minmax');
+    expect(after).toContain('34px 58px 100px minmax');
     m.dispose();
   });
 });
@@ -395,5 +395,18 @@ describe('the "Post to" bar', () => {
       '#main-content create-post-entry-point-wrapper { display: none !important; }',
     );
     expect(css).not.toMatch(/"\] create-post-entry-point-wrapper \{/);
+  });
+});
+
+describe('the page name beside the logo', () => {
+  it('names popular, all, a subreddit and its threads, and nothing else', async () => {
+    const { pageNameOf } = await import('../../src/modules/appearance/oldSkin/pageName');
+    const r = (u: string) => pageNameOf(classify(u));
+    expect(r('https://www.reddit.com/r/popular/')).toBe('popular');
+    expect(r('https://www.reddit.com/r/all/')).toBe('all');
+    expect(r('https://www.reddit.com/r/science/')).toBe('science');
+    expect(r('https://www.reddit.com/r/science/comments/abc/x/')).toBe('science');
+    expect(r('https://www.reddit.com/')).toBeNull();
+    expect(r('https://www.reddit.com/user/someone/')).toBeNull();
   });
 });

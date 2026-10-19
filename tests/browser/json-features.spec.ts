@@ -187,7 +187,7 @@ test.describe('my subreddits on the shortcut bar', () => {
     await box.getByRole('button', { name: /^import/ }).click();
     await expect(box).toContainText('Added 2, 1 already in the bar');
     await expect.poll(stored).toEqual(['pics', 'aww', 'space']);
-    await expect(bar.locator('.rescue-sc a')).toHaveText(['r/pics', 'r/aww', 'r/space']);
+    await expect(bar.locator('.rescue-sc a')).toHaveText(['pics', 'aww', 'space']);
   });
 
   test('signed out the control is disabled with a sign-in hint and nothing is requested', async () => {

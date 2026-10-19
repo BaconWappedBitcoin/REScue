@@ -30,6 +30,10 @@ export default defineContentScript({
   runAt: 'document_start',
   world: 'MAIN',
   main() {
+    // One bridge per page: the background may start REScue a second time (core/startupCheck).
+    const flags = window as unknown as Record<string, unknown>;
+    if (flags.__rescueBridge) return;
+    Object.defineProperty(flags, '__rescueBridge', { value: true });
     const byRef = (ref: string): Element | null =>
       /^[a-z0-9-]{1,40}$/i.test(ref) ? document.querySelector(`[${REF_ATTR}="${ref}"]`) : null;
 
@@ -154,9 +158,14 @@ export default defineContentScript({
 
     /** Item pattern: the wanted row's text, and its already-applied text. */
     const rowState = (item: MenuItemKind, text: string): 'on' | 'off' =>
-      item === 'report'
+      item === 'report' || item === 'delete'
         ? 'off'
-        : (item === 'save' ? C.saveHide.saveOnText : C.saveHide.hideOnText).test(text)
+        : (item === 'save'
+              ? C.saveHide.saveOnText
+              : item === 'inbox'
+                ? C.saveHide.inboxOnText
+                : C.saveHide.hideOnText
+            ).test(text)
           ? 'on'
           : 'off';
 
@@ -181,18 +190,21 @@ export default defineContentScript({
       const trigger = (deepQuery(box, C.saveHide.trigger) ??
         deepQuery(box, C.saveHide.triggerFallback)) as HTMLElement | null;
       if (!trigger) return { ok: false, error: 'not-found' };
-      const wanted =
-        item === 'save'
-          ? C.saveHide.saveText
-          : item === 'hide'
-            ? C.saveHide.hideText
-            : C.saveHide.reportText;
+      const wanted = {
+        save: C.saveHide.saveText,
+        hide: C.saveHide.hideText,
+        report: C.saveHide.reportText,
+        inbox: C.saveHide.inboxText,
+        delete: C.saveHide.deleteText,
+      }[item];
       const findRow = (): Element | undefined =>
         deepQueryAll(box, C.saveHide.item).find((n) => wanted.test((n.textContent ?? '').trim()));
       const wasOpen = trigger.getAttribute('aria-expanded') === 'true';
       if (!wasOpen) trigger.click();
       let row = findRow();
-      for (let i = 0; i < 10 && !row; i++) {
+      // A comment's menu fills its rows in lazily, a second or two after it first opens (live);
+      // a post's menu has them at once.
+      for (let i = 0; i < (menu === 'comment' ? 40 : 10) && !row; i++) {
         await sleep(100);
         row = findRow();
       }
@@ -207,8 +219,14 @@ export default defineContentScript({
         return { ok: true, itemState: state, itemText: text };
       }
       // A post-menu row is li[role=presentation] around the real div[role=menuitem]; only the inner
-      // one acts (verified live 2026-10-16), so click it when present.
-      ((row.querySelector('[role="menuitem"]') ?? row) as HTMLElement).click();
+      // one acts (verified live 2026-10-16), so click it when present. A comment-menu row is
+      // li[role=menuitem] around a clickable div that holds the handler (verified live 2026-10-19:
+      // clicking the li did nothing); clicking that div still bubbles to the li.
+      (
+        (row.querySelector('[role="menuitem"]') ??
+          row.querySelector(':scope > div') ??
+          row) as HTMLElement
+      ).click();
       return { ok: true, itemState: state, itemText: text };
     };
 

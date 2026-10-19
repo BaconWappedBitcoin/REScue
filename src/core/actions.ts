@@ -52,6 +52,12 @@ export interface ActionApi {
   hide(target: ActionTarget, on: boolean): Promise<ActionResult>;
   /** Whether Reddit's own Save row reads as already applied (null when unreadable). */
   saveState(target: ActionTarget): Promise<MenuState>;
+  /** Your own post's or comment's reply notifications on or off, through Reddit's own menu row. */
+  inboxReplies(target: ActionTarget, on: boolean): Promise<ActionResult>;
+  /** Whether Reddit's menu says reply notifications are on; null when the row cannot be read. */
+  inboxRepliesState(target: ActionTarget): Promise<MenuState>;
+  /** Press the Delete row of your own item's menu; Reddit then asks for confirmation itself. */
+  delete(target: ActionTarget): Promise<ActionResult>;
   /** Whether Reddit's own Hide row reads as already applied (null when unreadable). */
   hideState(target: ActionTarget): Promise<MenuState>;
   reply(target: ActionTarget, markdown: string): Promise<ActionResult>;
@@ -144,7 +150,7 @@ export function createActionApi(deps: ActionDeps): ActionApi {
   const menuOf = (el: Element): MenuKind => (el.matches(C.comment) ? 'comment' : 'post');
 
   const menuRequest = (ref: string, menu: MenuKind, item: MenuItemKind, click: boolean) =>
-    deps.bridge.request({ op: click ? 'menu.item' : 'menu.state', ref, menu, item }, 5000);
+    deps.bridge.request({ op: click ? 'menu.item' : 'menu.state', ref, menu, item }, 8000);
 
   /** The saved / hidden state Reddit's own menu row shows; null when it cannot be read. */
   const readMenu = async (ref: string, menu: MenuKind, item: MenuItemKind): Promise<MenuState> => {
@@ -181,8 +187,7 @@ export function createActionApi(deps: ActionDeps): ActionApi {
     return {
       ok: false,
       reason: 'timeout',
-      detail:
-        item === 'hide' ? 'Reddit did not confirm the hide' : 'Reddit did not confirm the save',
+      detail: `Reddit did not confirm the ${item === 'inbox' ? 'change to inbox replies' : item}`,
     };
   };
 
@@ -252,6 +257,31 @@ export function createActionApi(deps: ActionDeps): ActionApi {
       if (!deps.session().signedIn) return null;
       const el = target.source;
       return menuOf(el) === 'post' ? readMenu(deps.bridge.ref(el), 'post', 'hide') : null;
+    },
+    async inboxReplies(target, on) {
+      if (!deps.session().signedIn) return { ok: false, reason: 'signed-out' };
+      const key = `${target.id}:menu`;
+      if (busy.has(key)) return { ok: false, reason: 'rejected', detail: 'busy' };
+      busy.add(key);
+      try {
+        return await toggleMenu(target, menuOf(target.source), 'inbox', on);
+      } finally {
+        busy.delete(key);
+      }
+    },
+    async inboxRepliesState(target) {
+      if (!deps.session().signedIn) return null;
+      return readMenu(deps.bridge.ref(target.source), menuOf(target.source), 'inbox');
+    },
+    async delete(target) {
+      if (!deps.session().signedIn) return { ok: false, reason: 'signed-out' };
+      const r = await menuRequest(
+        deps.bridge.ref(target.source),
+        menuOf(target.source),
+        'delete',
+        true,
+      );
+      return r.ok ? { ok: true } : failure(r.error);
     },
     async reply() {
       return deps.session().signedIn ? NOT_DELEGATED : { ok: false, reason: 'signed-out' };

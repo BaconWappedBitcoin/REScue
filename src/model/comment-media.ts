@@ -56,6 +56,25 @@ export function kindOfFigure(figure: Element): CommentMediaKind {
 }
 
 /**
+ * Start the GIFs of a figure you just chose to show: a GIF is a silent looping player, and Reddit
+ * would otherwise leave it waiting for a second click. Uses the player's public `play()` (or a
+ * light-DOM `<video>`); videos with sound are left for you to start. Never reaches into a shadow root.
+ */
+export function playGifs(figure: Element): void {
+  const gifs = figure.querySelectorAll<HTMLElement & { play?: () => unknown }>(
+    `${C.commentMedia.gif}, ${C.commentMedia.gif} video`,
+  );
+  for (const g of gifs) {
+    try {
+      const r = typeof g.play === 'function' ? g.play() : null;
+      if (r instanceof Promise) r.catch(() => {});
+    } catch {
+      /* not ready yet: it starts when the reader presses play */
+    }
+  }
+}
+
+/**
  * Stop a hidden player: pause what a player or video offers through its public API (a method on
  * the element, or a light-DOM `<video>`). Never reaches into a shadow root.
  */

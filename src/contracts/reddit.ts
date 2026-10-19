@@ -302,6 +302,11 @@ export const C = {
     /** Presence on the overflow menu: the signed-in user may edit this comment. */
     editableAttrs: ['editable-comment', 'is-comment-author'],
     editItemText: /^\s*edit(?:\s+comment)?\s*$/i,
+    /**
+     * On the menu of your OWN comment while replies go to your inbox. VERIFIED LIVE 2026-10-19
+     * (LibreWolf, signed in): present with replies on; read without opening the menu.
+     */
+    sendRepliesAttr: 'is-send-replies',
   },
   /**
    * Save / hide through Reddit's OWN overflow menu (Save/Hide keys and hide links). Recorded live
@@ -329,6 +334,19 @@ export const C = {
     hideOnText: /^\s*(?:unhide|remove from hidden)\s*$/i,
     /** The Report row of a post's or comment's menu (opens Reddit's own report dialog). */
     reportText: /^\s*report(?:\s+(?:post|comment))?\s*$/i,
+    /**
+     * The reply-notification row of your OWN post's or comment's menu. VERIFIED LIVE 2026-10-19 on
+     * a comment: "Turn off reply notifications" (the rows: Edit comment, Save, Delete comment, Mark
+     * as brand affiliate, Turn off reply notifications), filled in 1-2 s after the menu first
+     * opens. The older "Disable/Enable inbox replies" wording is matched too. No match: nothing is
+     * pressed and the reader is told.
+     */
+    inboxText:
+      /^\s*(?:(?:disable|enable)\s+(?:inbox\s+)?repl(?:y|ies)(?:\s+notifications)?|turn\s+(?:off|on)\s+(?:reply\s+|inbox\s+)?(?:notifications|replies))\s*$/i,
+    /** That row while replies are ON (it offers to turn them off). */
+    inboxOnText: /^\s*(?:disable|turn\s+off)\b/i,
+    /** The Delete row of your own post's or comment's menu ("Delete comment", seen live 2026-10-19; Reddit then asks to confirm). */
+    deleteText: /^\s*delete(?:\s+(?:post|comment))?\s*$/i,
   },
   /** Boolean attributes on a post, VERIFIED LIVE 2026-10-15 (R20). */
   postFlagAttrs: { locked: 'locked', stickied: 'stickied' },
@@ -396,6 +414,15 @@ export const C = {
     videoPoster: 'poster',
     /** The attribute on Reddit's feed sort dropdown while REScue's tabs stand in for it. */
     tabsAttr: 'data-rescue-tabs',
+    /**
+     * Reddit's header parts. VERIFIED LIVE 2026-10-19 (www., LibreWolf): `reddit-header-large header
+     * nav` has three groups: the logo (`a#reddit-logo`, one orange "reddit" wordmark svg), the search
+     * (a 560 px wide box), and the action buttons (advertise, chat, inbox, create, avatar).
+     */
+    headerLogo: 'reddit-header-large a#reddit-logo',
+    headerSearch: 'reddit-header-large header nav > div:nth-child(2)',
+    headerActions: 'reddit-header-large header nav > div:nth-child(3)',
+    headerAdvertise: 'reddit-header-large #advertise-button',
     /**
      * Reddit's create-post control. VERIFIED LIVE 2026-10-19 (r/news, LibreWolf): the subreddit
      * header's "Create Post" button is one (outside #main-content), and at some widths a large

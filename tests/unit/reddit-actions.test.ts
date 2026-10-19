@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { C } from '../../src/contracts/reddit';
 import { createActionApi, type ActionTarget } from '../../src/core/actions';
 import type { BridgeRequest, BridgeResponse } from '../../src/core/bridge-protocol';
 import { KeyDispatcher } from '../../src/core/keys';
@@ -230,7 +231,12 @@ describe('keyboard save / hide', () => {
       session: { signedIn: true, username: 'me' },
       ui: { selection: () => sel },
       keys: { register: (c: never) => keys.register(c) },
-      actions: { saveState: async () => 'on', save, voteState: async () => 0, vote: async () => ({ ok: true }) },
+      actions: {
+        saveState: async () => 'on',
+        save,
+        voteState: async () => 0,
+        vote: async () => ({ ok: true }),
+      },
       notices: { show: () => {}, dismiss: () => {} },
     };
     keyboardActions.init!(ctx as never);
@@ -264,7 +270,9 @@ describe('keyboard save / hide', () => {
     failing.press({ key: 'h' });
     await vi.waitFor(() => expect(failing.hide).toHaveBeenCalledTimes(1));
     await vi.waitFor(() => expect(failing.sel.current()!.id).toBe(start));
-    expect(failing.shown).toContain('Reddit did not confirm the hide; it may not have gone through.');
+    expect(failing.shown).toContain(
+      'Reddit did not confirm the hide; it may not have gone through.',
+    );
     failing.sel.reset();
   });
 
@@ -280,7 +288,12 @@ describe('keyboard save / hide', () => {
       session: { signedIn: true, username: 'me' },
       ui: { selection: () => sel },
       keys: { register: (c: never) => keys.register(c) },
-      actions: { saveState: async () => 'off', save, voteState: async () => 0, vote: async () => ({ ok: true }) },
+      actions: {
+        saveState: async () => 'off',
+        save,
+        voteState: async () => 0,
+        vote: async () => ({ ok: true }),
+      },
       notices: { show: () => {}, dismiss: () => {} },
     };
     keyboardActions.init!(ctx as never);
@@ -323,13 +336,13 @@ describe('overflow menu fixtures', () => {
     const clicked: string[] = [];
     addPostOverflowMenu(first, { onItem: (t) => clicked.push(t) });
     const rows = () =>
-      [...first.querySelector('shreddit-post-overflow-menu')!.shadowRoot!.querySelectorAll('li')].map(
-        (n) => n.textContent,
-      );
+      [
+        ...first.querySelector('shreddit-post-overflow-menu')!.shadowRoot!.querySelectorAll('li'),
+      ].map((n) => n.textContent);
     const row = (text: string) =>
-      [...first.querySelector('shreddit-post-overflow-menu')!.shadowRoot!.querySelectorAll('li')].find(
-        (n) => n.textContent === text,
-      ) as HTMLElement;
+      [
+        ...first.querySelector('shreddit-post-overflow-menu')!.shadowRoot!.querySelectorAll('li'),
+      ].find((n) => n.textContent === text) as HTMLElement;
     row('Save').click();
     expect(rows()).toContain('Unsave');
     row('Unsave').click();
@@ -352,5 +365,64 @@ describe('overflow menu fixtures', () => {
     const save = items().find((n) => n.textContent === 'Save') as HTMLElement;
     save.click();
     expect(items().map((n) => n.textContent)).toContain('Unsave');
+  });
+});
+
+describe('inbox replies and delete on your own items (Reddit’s own menu rows)', () => {
+  it('matches the known phrasings of the reply-notification row and reads which way it points', () => {
+    for (const t of [
+      'Disable inbox replies',
+      'Enable inbox replies',
+      'Turn off reply notifications',
+      'Turn on notifications',
+      'disable replies',
+    ]) {
+      expect(C.saveHide.inboxText.test(t), t).toBe(true);
+    }
+    for (const t of ['Report', 'Save', 'Disable', 'Turn off', 'Inbox'])
+      expect(C.saveHide.inboxText.test(t), t).toBe(false);
+    expect(C.saveHide.inboxOnText.test('Disable inbox replies')).toBe(true);
+    expect(C.saveHide.inboxOnText.test('Turn off reply notifications')).toBe(true);
+    expect(C.saveHide.inboxOnText.test('Enable inbox replies')).toBe(false);
+    expect(C.saveHide.deleteText.test('Delete')).toBe(true);
+    expect(C.saveHide.deleteText.test('Delete comment')).toBe(true);
+    expect(C.saveHide.deleteText.test('Undelete everything')).toBe(false);
+  });
+
+  it('turns replies off through the row only when it is on, and confirms', async () => {
+    let on = true;
+    const requests: BridgeRequest[] = [];
+    const bridge: BridgeApi = {
+      ref: () => 'r1',
+      async request(body): Promise<BridgeResponse> {
+        requests.push(body);
+        if (body.op === 'menu.item') on = !on;
+        return { ok: true, itemState: on ? 'on' : 'off' };
+      },
+    } as BridgeApi;
+    const api = createActionApi({ bridge, session: signedIn, ...fast });
+    expect(await api.inboxRepliesState(comment())).toBe('on');
+    expect(await api.inboxReplies(comment(), false)).toEqual({ ok: true });
+    expect(on).toBe(false);
+    const clicksBefore = requests.filter((r) => r.op === 'menu.item').length;
+    expect(await api.inboxReplies(comment(), false)).toEqual({ ok: true });
+    expect(requests.filter((r) => r.op === 'menu.item').length).toBe(clicksBefore);
+    expect(requests.every((r) => r.op !== 'menu.item' || r.item === 'inbox')).toBe(true);
+  });
+
+  it('delete presses only the Delete row (Reddit then asks), and nothing signed out', async () => {
+    const requests: BridgeRequest[] = [];
+    const bridge = {
+      ref: () => 'r1',
+      request: async (b: BridgeRequest) => (requests.push(b), { ok: true }),
+    } as unknown as BridgeApi;
+    expect(await createActionApi({ bridge, session: signedIn, ...fast }).delete(comment())).toEqual(
+      { ok: true },
+    );
+    expect(requests).toEqual([{ op: 'menu.item', ref: 'r1', menu: 'comment', item: 'delete' }]);
+    const out = createActionApi({ bridge, session: () => ({ signedIn: false, username: null }) });
+    expect(await out.delete(comment())).toEqual({ ok: false, reason: 'signed-out' });
+    expect(await out.inboxRepliesState(comment())).toBeNull();
+    expect(requests).toHaveLength(1);
   });
 });

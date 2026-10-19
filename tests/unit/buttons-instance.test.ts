@@ -163,3 +163,22 @@ describe('button helper and style', () => {
     }
   });
 });
+
+describe('a page that clears <html>’s attributes', () => {
+  it('does not switch REScue off: the token is put back, and only another token supersedes', async () => {
+    // Its own document, so instances left by the tests above cannot answer the same mutations.
+    const doc = document.implementation.createHTMLDocument('x');
+    const root = doc.documentElement;
+    let superseded = 0;
+    const inst = takeOver(() => superseded++, doc);
+    root.removeAttribute(INSTANCE_ATTR);
+    await tick();
+    expect(inst.alive()).toBe(true);
+    expect(root.getAttribute(INSTANCE_ATTR)).toBe(inst.token);
+    expect(superseded).toBe(0);
+    root.setAttribute(INSTANCE_ATTR, 'someone-newer');
+    await tick();
+    expect(inst.alive()).toBe(false);
+    expect(superseded).toBe(1);
+  });
+});

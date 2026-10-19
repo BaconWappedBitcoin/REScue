@@ -36,6 +36,7 @@ import {
 import { applyEarlySkin, clearEarlySkin } from '../modules/appearance/oldSkin/early';
 import { SKIN_STYLE_ID } from '../modules/appearance/oldRedditSkin';
 import { applyEarlyFrontSort } from '../modules/appearance/logoLink';
+import { PING } from "../core/startupCheck";
 import { readNoticePrefs, withMutedTypes } from '../modules/core/noticeSettings';
 
 const FROM_OLD_PARAM = 'rescue_from_old';
@@ -47,6 +48,10 @@ export default defineContentScript({
   excludeMatches: ['*://*.reddit.com/media*'],
   runAt: 'document_start',
   main() {
+    // Answer the background's startup check (core/startupCheck) so it does not start a second copy.
+    browser.runtime.onMessage.addListener((msg: unknown) =>
+      (msg as { type?: string })?.type === PING ? Promise.resolve(true) : undefined,
+    );
     // Logo link › "Front page sort": a bare front page opens with the chosen sort at once.
     if (applyEarlyFrontSort(location.href)) return;
     // Troubleshooter › "Disable REScue in this tab": leave the page exactly as Reddit made it.
@@ -154,7 +159,10 @@ export default defineContentScript({
             const ctx: ModuleContext = contexts.get(moduleId) ?? {
               moduleId,
               route,
-              session,
+              // Read live: contexts are made before the page is parsed, so a copy would stay signed out.
+              get session() {
+                return session;
+              },
               store: store.scoped(moduleId),
               data,
               notices,
@@ -198,7 +206,10 @@ export default defineContentScript({
             const ctx: ModuleContext = {
               moduleId: def.id,
               route,
-              session,
+              // Read live: contexts are made before the page is parsed, so a copy would stay signed out.
+              get session() {
+                return session;
+              },
               store: store.scoped(def.id),
               data,
               notices,

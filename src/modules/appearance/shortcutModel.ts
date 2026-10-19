@@ -32,11 +32,16 @@ export function shortcutHref(raw: unknown): string | null {
   return /^u\//i.test(t) ? `/user/${rest}/` : `/${t}/`;
 }
 
-/** The text shown for a shortcut: its label, else `r/name`, else the path. */
+/** A shortcut's text: its label, else the subreddit name without r/ (as on old Reddit), else the path. */
 export function shortcutLabel(target: string, label: unknown): string {
   if (typeof label === 'string' && label.trim()) return label.trim().slice(0, 40);
   const href = shortcutHref(target);
-  return href ? href.replace(/^\/|\/$/g, '').replace(/^user\//, 'u/') : target;
+  return href
+    ? href
+        .replace(/^\/|\/$/g, '')
+        .replace(/^r\//, '')
+        .replace(/^user\//, 'u/')
+    : target;
 }
 
 /** The subreddits of a `a+b` group target, or null when the target is not a group. */
@@ -207,8 +212,8 @@ export function staticLinks(
 ): Array<{ text: string; href: string }> {
   const out: Array<{ text: string; href: string }> = [];
   if (o.showDefaults) {
-    out.push({ text: 'Home', href: '/' }, { text: 'r/all', href: '/r/all/' });
-    out.push({ text: 'r/popular', href: '/r/popular/' });
+    out.push({ text: 'Home', href: '/' }, { text: 'all', href: '/r/all/' });
+    out.push({ text: 'popular', href: '/r/popular/' });
   }
   if (o.linkDashboard) out.push({ text: 'Dashboard', href: '#rescue:dashboard' });
   if (o.linkRandom) out.push({ text: 'Random', href: '/r/random/' });

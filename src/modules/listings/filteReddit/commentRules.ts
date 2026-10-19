@@ -17,18 +17,27 @@ import {
 } from './commentConditions';
 import { checkExpression, type Test } from './conditions';
 import { browseConditions, compileBrowse, type BrowseEnv } from './browseConditions';
+import { isLowEffort } from './lowEffort';
 import { parsePattern } from './pattern';
 
 export { isDeleted };
 export type { CommentEnv, CommentFacts };
 
 export type CommentRuleType =
-  'keyword' | 'user' | 'deleted' | 'depth' | 'score-below' | 'score-above' | 'custom';
+  | 'keyword'
+  | 'user'
+  | 'deleted'
+  | 'low-effort'
+  | 'depth'
+  | 'score-below'
+  | 'score-above'
+  | 'custom';
 export type CommentAction = 'collapse' | 'hide';
 export const COMMENT_RULE_TYPES: CommentRuleType[] = [
   'keyword',
   'user',
   'deleted',
+  'low-effort',
   'depth',
   'score-below',
   'score-above',
@@ -58,7 +67,7 @@ export interface CompiledCommentRule {
   when?: Test<unknown, BrowseEnv>;
 }
 
-const needsPattern = (t: CommentRuleType): boolean => t !== 'deleted';
+const needsPattern = (t: CommentRuleType): boolean => t !== 'deleted' && t !== 'low-effort';
 const DEPTH = /^\d{1,3}$/;
 const SCORE = /^-?\d{1,9}$/;
 const isScoreRule = (t: CommentRuleType): boolean => t === 'score-below' || t === 'score-above';
@@ -148,6 +157,8 @@ function conditionHolds(rule: CompiledCommentRule, f: CommentFacts, env?: Commen
       return !!env && !!rule.custom?.(f, env);
     case 'deleted':
       return isDeleted(f);
+    case 'low-effort':
+      return isLowEffort(f.body);
     case 'depth':
       return f.depth >= rule.num;
     case 'score-below':
@@ -164,12 +175,14 @@ function conditionHolds(rule: CompiledCommentRule, f: CommentFacts, env?: Commen
 export const describeCommentRule = (r: CommentRule): string =>
   r.type === 'deleted'
     ? 'deleted comment'
-    : r.type === 'depth'
-      ? `depth ${r.pattern.trim()} or deeper`
-      : r.type === 'custom'
-        ? `custom: ${r.pattern.trim()}`
-        : r.type === 'score-below'
-          ? `score below ${r.pattern.trim()}`
-          : r.type === 'score-above'
-            ? `score above ${r.pattern.trim()}`
-            : `comment ${r.type}: ${r.pattern}`;
+    : r.type === 'low-effort'
+      ? 'low-effort reply'
+      : r.type === 'depth'
+        ? `depth ${r.pattern.trim()} or deeper`
+        : r.type === 'custom'
+          ? `custom: ${r.pattern.trim()}`
+          : r.type === 'score-below'
+            ? `score below ${r.pattern.trim()}`
+            : r.type === 'score-above'
+              ? `score above ${r.pattern.trim()}`
+              : `comment ${r.type}: ${r.pattern}`;

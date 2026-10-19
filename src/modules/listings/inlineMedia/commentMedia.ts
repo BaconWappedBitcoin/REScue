@@ -20,9 +20,15 @@ import {
   FIGURE_SELECTOR,
   kindOfFigure,
   pausePlayers,
+  playGifs,
 } from '../../../model/comment-media';
 import { C } from '../../../contracts/reddit';
 import { onClick } from '../../comments/commentUi';
+
+/** A GIF you just chose to show starts at once (after the frame that shows it). */
+const startGifs = (figure: HTMLElement): void => {
+  requestAnimationFrame(() => playGifs(figure));
+};
 
 const BUTTON_STYLE =
   'display:inline-block;background:none;border:0;padding:0 4px;margin:2px 0;cursor:pointer;font:inherit;font-size:12px;color:var(--rescue-meta,#666);text-decoration:underline';
@@ -153,6 +159,7 @@ export class CommentMedia {
       if (e.key) this.choices.set(e.key, show);
       else e.choice = show;
       this.apply(f);
+      if (show) startGifs(f);
     }
     if (show) this.onShown();
   }
@@ -184,7 +191,10 @@ export class CommentMedia {
       if (next.key) this.choices.set(next.key, show);
       else next.choice = show;
       this.apply(figure);
-      if (show) this.onShown();
+      if (show) {
+        startGifs(figure);
+        this.onShown();
+      }
     });
     return b;
   }

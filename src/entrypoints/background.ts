@@ -12,6 +12,7 @@ import {
   staleChunkKeys,
   unchunkFromSync,
 } from '../core/storage/sync';
+import { ensureRunning, isRedditPage, PING } from '../core/startupCheck';
 import { readBundledJson } from '../core/net';
 import { pruneRead, pruneOlderThan, type ReadRecord } from '../core/storage/prune';
 import {
@@ -101,7 +102,8 @@ export default defineBackground(() => {
     const next = { ...normalizeProfile(synced.profile), syncEnabled: true };
     // Keep this device's settings as they were, so a bad synced copy can be undone by hand.
     const { settings: previous } = await browser.storage.local.get('settings');
-    if (previous) await browser.storage.local.set({ settingsBeforeSync: { at: Date.now(), previous } });
+    if (previous)
+      await browser.storage.local.set({ settingsBeforeSync: { at: Date.now(), previous } });
     await browser.storage.local.set({ settings: next });
     await setSyncState({ knownHash: synced.hash, pendingHash: undefined });
     await broadcastSettingsChanged();
@@ -276,6 +278,25 @@ export default defineBackground(() => {
       default:
         return undefined;
     }
+  });
+
+  // A Reddit page that loaded without REScue gets it started here (core/startupCheck).
+  browser.tabs.onUpdated.addListener((tabId, change, tab) => {
+    if (change.status !== 'complete' || !isRedditPage(tab.url)) return;
+    void ensureRunning(tabId, {
+      ping: (id) => browser.tabs.sendMessage(id, { type: PING }),
+      inject: async (id) => {
+        await browser.scripting.executeScript({
+          target: { tabId: id },
+          world: 'MAIN',
+          files: ['/content-scripts/bridge.js'],
+        });
+        await browser.scripting.executeScript({
+          target: { tabId: id },
+          files: ['/content-scripts/content.js'],
+        });
+      },
+    });
   });
 
   browser.tabs.onRemoved.addListener((id) => {

@@ -89,7 +89,7 @@ async function dragTo(page: Page, from: Locator, to: Locator) {
 
 test('the hover edit control opens a popup that renames a shortcut, saved live and kept on reload', async () => {
   const page = await open(dated('askscience', 'aww', 'pics'));
-  await expect(links(page)).toHaveText(['r/askscience', 'r/aww', 'r/pics']);
+  await expect(links(page)).toHaveText(['askscience', 'aww', 'pics']);
 
   await item(page, 1).hover();
   await item(page, 1).locator('.rescue-sc-edit').click();
@@ -100,13 +100,13 @@ test('the hover edit control opens a popup that renames a shortcut, saved live a
   await popup(page).getByRole('button', { name: 'Save' }).click();
 
   await expect(popup(page)).toHaveCount(0);
-  await expect(links(page)).toHaveText(['r/askscience', 'Cats!', 'r/pics']);
+  await expect(links(page)).toHaveText(['askscience', 'Cats!', 'pics']);
   await expect(links(page).nth(1)).toHaveAttribute('href', '/r/cats/');
   await expect.poll(targets).toEqual(['askscience', 'r/cats', 'pics']);
   expect((await stored())[1]).toMatchObject({ label: 'Cats!', addedAt: 1001 });
 
   await page.reload();
-  await expect(links(page)).toHaveText(['r/askscience', 'Cats!', 'r/pics']);
+  await expect(links(page)).toHaveText(['askscience', 'Cats!', 'pics']);
 });
 
 test('right-click opens the editor, and a bad address is refused in the popup', async () => {
@@ -130,7 +130,7 @@ test('the + control adds a new shortcut through the same popup', async () => {
   await popup(page).locator('input[name="label"]').fill('Pets');
   await popup(page).getByRole('button', { name: 'Save' }).click();
 
-  await expect(links(page)).toHaveText(['r/aww', 'Pets']);
+  await expect(links(page)).toHaveText(['aww', 'Pets']);
   await expect.poll(targets).toEqual(['aww', 'pics+cats']);
   const added = (await stored())[1]!;
   expect(added.label).toBe('Pets');
@@ -140,7 +140,7 @@ test('the + control adds a new shortcut through the same popup', async () => {
 test('dragging a link reorders the bar and the stored list', async () => {
   const page = await open(dated('aa', 'bb', 'cc'));
   await dragTo(page, item(page, 0), item(page, 2));
-  await expect(links(page)).toHaveText(['r/bb', 'r/cc', 'r/aa']);
+  await expect(links(page)).toHaveText(['bb', 'cc', 'aa']);
   await expect.poll(targets).toEqual(['bb', 'cc', 'aa']);
 });
 
@@ -148,12 +148,12 @@ test('Alt+arrow moves the focused link and keeps the focus on it', async () => {
   const page = await open(dated('aa', 'bb', 'cc'));
   await links(page).nth(0).focus();
   await page.keyboard.press('Alt+ArrowRight');
-  await expect(links(page)).toHaveText(['r/bb', 'r/aa', 'r/cc']);
+  await expect(links(page)).toHaveText(['bb', 'aa', 'cc']);
   await expect(links(page).nth(1)).toBeFocused();
   await page.keyboard.press('Alt+ArrowRight');
-  await expect(links(page)).toHaveText(['r/bb', 'r/cc', 'r/aa']);
+  await expect(links(page)).toHaveText(['bb', 'cc', 'aa']);
   await page.keyboard.press('Alt+ArrowLeft');
-  await expect(links(page)).toHaveText(['r/bb', 'r/aa', 'r/cc']);
+  await expect(links(page)).toHaveText(['bb', 'aa', 'cc']);
   await expect.poll(targets).toEqual(['bb', 'aa', 'cc']);
 });
 
@@ -171,14 +171,14 @@ test('dragging onto the delete zone removes a shortcut; the editor popup can too
   await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2, { steps: 8 });
   await page.mouse.up();
 
-  await expect(links(page)).toHaveText(['r/aa', 'r/cc']);
+  await expect(links(page)).toHaveText(['aa', 'cc']);
   await expect(trash).toBeHidden();
   await expect.poll(targets).toEqual(['aa', 'cc']);
 
   await item(page, 0).hover();
   await item(page, 0).locator('.rescue-sc-edit').click();
   await popup(page).getByRole('button', { name: 'Delete' }).click();
-  await expect(links(page)).toHaveText(['r/cc']);
+  await expect(links(page)).toHaveText(['cc']);
   await expect.poll(targets).toEqual(['cc']);
 });
 
@@ -187,12 +187,12 @@ test('the + r/name button on a subreddit page is a toggle', async () => {
   const toggle = bar(page).locator('[data-rescue-toggle]');
   await expect(toggle).toHaveText('+ r/programming');
   await toggle.click();
-  await expect(links(page)).toHaveText(['r/aww', 'r/programming']);
+  await expect(links(page)).toHaveText(['aww', 'programming']);
   await expect(toggle).toHaveText('− r/programming');
   await expect.poll(targets).toEqual(['aww', 'r/programming']);
 
   await toggle.click();
-  await expect(links(page)).toHaveText(['r/aww']);
+  await expect(links(page)).toHaveText(['aww']);
   await expect(toggle).toHaveText('+ r/programming');
   await expect.poll(targets).toEqual(['aww']);
 });
@@ -208,17 +208,17 @@ test('the sort menu orders by name either way, or by date added', async () => {
     await bar(page).getByRole('menuitem', { name }).click();
   };
   await sort('Name A–Z');
-  await expect(links(page)).toHaveText(['r/aa', 'r/bb', 'r/cc']);
+  await expect(links(page)).toHaveText(['aa', 'bb', 'cc']);
   await sort('Name Z–A');
-  await expect(links(page)).toHaveText(['r/cc', 'r/bb', 'r/aa']);
+  await expect(links(page)).toHaveText(['cc', 'bb', 'aa']);
   await sort('Date added');
-  await expect(links(page)).toHaveText(['r/bb', 'r/cc', 'r/aa']);
+  await expect(links(page)).toHaveText(['bb', 'cc', 'aa']);
   await expect.poll(targets).toEqual(['bb', 'cc', 'aa']);
 });
 
 test('rows saved before there were dates get one, and stay in order', async () => {
   const page = await open([{ target: 'aa' }, { target: 'bb' }]);
-  await expect(links(page)).toHaveText(['r/aa', 'r/bb']);
+  await expect(links(page)).toHaveText(['aa', 'bb']);
   await expect
     .poll(async () => (await stored()).every((r) => typeof r.addedAt === 'number'))
     .toBe(true);
@@ -248,8 +248,8 @@ test('the optional static links are shown, with Saved from the signed-in name', 
   const statics = bar(page).locator('.rescue-sc-viewport > a');
   await expect(statics).toHaveText([
     'Home',
-    'r/all',
-    'r/popular',
+    'all',
+    'popular',
     'Random',
     'Friends',
     'Mod',

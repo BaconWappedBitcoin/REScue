@@ -85,7 +85,15 @@ export function takeOver(onSuperseded: () => void, doc: Document = document): In
 
   let live = true;
   const check = (): void => {
-    if (!live || root.getAttribute(INSTANCE_ATTR) === token) return;
+    if (!live) return;
+    const now = root.getAttribute(INSTANCE_ATTR);
+    if (now === token) return;
+    // Only another token means a newer REScue. A page script that clears <html>'s attributes (as
+    // Reddit's in-page navigation can) is not one: put the token back and carry on.
+    if (now === null || now === '') {
+      root.setAttribute(INSTANCE_ATTR, token);
+      return;
+    }
     live = false;
     observer.disconnect();
     try {

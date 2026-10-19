@@ -41,7 +41,7 @@ describe('shortcut model', () => {
     expect(groupMembers('r/aa+bb')).toEqual(['aa', 'bb']);
     expect(groupMembers('aa')).toBeNull();
     const [item] = shortcutItems([row('aa+bb')]);
-    expect(item).toMatchObject({ href: '/r/aa+bb/', text: 'r/aa+bb', members: ['aa', 'bb'] });
+    expect(item).toMatchObject({ href: '/r/aa+bb/', text: 'aa+bb', members: ['aa', 'bb'] });
   });
 
   it('migrates rows without a date, keeping their order, and leaves dated rows alone', () => {
@@ -169,7 +169,7 @@ describe('shortcut bar: edit, add and delete', () => {
     expect(popup()).toBeNull();
     expect(t.last()).toEqual([{ target: 'r/newname', label: 'New', addedAt: 1 }, THREE[1], THREE[2]]);
     t.redraw(t.last());
-    expect(texts()).toEqual(['New', 'Bee', 'r/cc']);
+    expect(texts()).toEqual(['New', 'Bee', 'cc']);
     t.m.dispose();
   });
 
@@ -286,7 +286,7 @@ describe('shortcut bar: reorder, sort, groups and the rest', () => {
     fire(second, 'keydown', { key: 'ArrowRight', altKey: true });
     expect(targets(t.last())).toEqual(['aa', 'cc', 'bb']);
     t.redraw(t.last());
-    expect(texts()).toEqual(['r/aa', 'r/cc', 'Bee']);
+    expect(texts()).toEqual(['aa', 'cc', 'Bee']);
     expect(document.activeElement).toBe(q('.rescue-sc[data-index="2"] a'));
     fire(q('.rescue-sc[data-index="0"] a')!, 'keydown', { key: 'ArrowLeft', altKey: true });
     expect(t.saves).toHaveLength(1); // already first: nothing to do
@@ -417,7 +417,7 @@ describe('shortcut bar: dated rows', () => {
     expect(saves[0]!.map((r) => r.target)).toEqual(['aa', 'bb']);
     expect(saves[0]!.every((r) => typeof r.addedAt === 'number')).toBe(true);
     expect(saves[0]![0]!.addedAt as number).toBeLessThan(saves[0]![1]!.addedAt as number);
-    expect(texts()).toEqual(['r/aa', 'r/bb']);
+    expect(texts()).toEqual(['aa', 'bb']);
     // Dated rows come back from the save: no second save.
     subredditManager.onSettings!({
       ...base,
@@ -500,7 +500,7 @@ describe('T147 shortcut bar options', () => {
       {},
       { username: 'Alice', raw: true, stored: { accounts: { current: 'bob', lists: { alice: [row('alices')] } } } },
     );
-    expect(texts()).toEqual(['r/alices']);
+    expect(texts()).toEqual(['alices']);
     const state = storeOf(t.m).accounts as { current: string; lists: Record<string, RawRow[]> };
     expect(state.current).toBe('alice');
     expect(targets(state.lists.bob!)).toEqual(['bobs']);
@@ -517,7 +517,7 @@ describe('T147 shortcut bar options', () => {
       { shortcutsPerAccount: false },
       { username: 'Cy', raw: true, stored: { accounts: { current: 'bob', lists: {} } } },
     );
-    expect(texts()).toEqual(['r/bobs']);
+    expect(texts()).toEqual(['bobs']);
     shared.m.dispose();
   });
 });

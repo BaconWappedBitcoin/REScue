@@ -14,7 +14,7 @@
  * hidden by the stylesheet only while `data-rescue-ov` is set; the bridge keeps pressing its buttons.
  */
 import { h } from '../../../core/dom';
-import { commentScoreOf } from '../../../model/commentRow';
+import { commentScoreOf, ownActionRow } from '../../../model/commentRow';
 import { parseComment } from '../../../model/comment';
 import { agoText, pointsText } from '../../../model/oldSkinText';
 import type { ActionResult } from '../../../core/actions';
@@ -32,18 +32,24 @@ export class CommentView {
   private readonly links: HTMLElement;
   private readonly permalink: HTMLAnchorElement;
   private readonly save: HTMLButtonElement;
+  private inboxBtn: HTMLButtonElement | null = null;
+  /** The state REScue last set; Reddit's attribute only catches up on the next page load (live). */
+  private inboxSet: boolean | null = null;
   private saved = false;
   private id: string;
 
   static mount(host: Element, ctx: Ctx): CommentView | null {
     const c = parseComment(host, null);
-    return c ? new CommentView(host, ctx, c.id) : null;
+    if (!c) return null;
+    const me = ctx.session.username?.toLowerCase();
+    return new CommentView(host, ctx, c.id, !!me && c.author?.toLowerCase() === me);
   }
 
   private constructor(
     private readonly host: Element,
     private readonly ctx: Ctx,
     id: string,
+    own: boolean,
   ) {
     this.id = id;
     const target = { id, source: host };
@@ -65,6 +71,15 @@ export class CommentView {
       { class: 'rescue-olinks rescue-ocl' },
       h('li', null, this.permalink),
       h('li', null, this.save),
+      // Your own comment: old Reddit's edit, inbox-replies and delete words, each pressing the row
+      // of Reddit's own menu (Reddit asks before deleting).
+      ...(own
+        ? [
+            this.item('edit', () => ctx.actions.startEdit(target)),
+            h('li', null, this.inboxToggle(target)),
+            this.item('delete', () => ctx.actions.delete(target)),
+          ]
+        : []),
       this.item('report', () => ctx.actions.report(target)),
       this.item('reply', () => ctx.actions.startReply(target)),
     );
@@ -86,6 +101,47 @@ export class CommentView {
         .finally(() => setAttr(b, 'aria-busy', null));
     });
     return h('li', null, b);
+  }
+
+  /** "disable inbox replies" / "enable inbox replies": reads Reddit's row, flips it, shows the result. */
+  private inboxToggle(target: { id: string; source: Element }): HTMLButtonElement {
+    const b = h('button', { type: 'button', class: 'rescue-olink' }, this.inboxWord());
+    this.inboxBtn = b;
+    onActivate(b, () => {
+      if (b.getAttribute('aria-busy') === 'true') return;
+      setAttr(b, 'aria-busy', 'true');
+      void (async () => {
+        // Reddit's menu element says it (no need to open the menu); its row is the fallback.
+        const attr = this.inboxOn();
+        const now =
+          attr === null ? await this.ctx.actions.inboxRepliesState(target) : attr ? 'on' : 'off';
+        if (now === null) {
+          say(
+            this.ctx,
+            'REScue could not find the inbox-replies item in Reddit’s menu for this comment.',
+          );
+          return;
+        }
+        const on = now === 'off';
+        const r = await this.ctx.actions.inboxReplies(target, on);
+        if (r.ok) {
+          this.inboxSet = on;
+          setText(b, this.inboxWord());
+        } else say(this.ctx, failureText('inbox replies', r));
+      })().finally(() => setAttr(b, 'aria-busy', null));
+    });
+    return b;
+  }
+
+  /** Whether replies go to your inbox, from Reddit's own menu element; null before it is there. */
+  private inboxOn(): boolean | null {
+    if (this.inboxSet !== null) return this.inboxSet;
+    const menu = ownActionRow(this.host)?.querySelector(C.commentActions.overflowMenu);
+    return menu ? menu.hasAttribute(C.commentActions.sendRepliesAttr) : null;
+  }
+
+  private inboxWord(): string {
+    return this.inboxOn() === false ? 'enable inbox replies' : 'disable inbox replies';
   }
 
   private async toggleSave(target: { id: string; source: Element }): Promise<void> {
@@ -127,6 +183,9 @@ export class CommentView {
     if (!c) return;
     this.id = c.id;
     this.vote.update();
+    // Reddit's menu element arrives after the row: keep the inbox word in step with it.
+    if (this.inboxBtn && this.inboxBtn.getAttribute('aria-busy') !== 'true')
+      setText(this.inboxBtn, this.inboxWord());
     const score = this.vote.shown;
     setText(this.score, score === null ? '[score hidden]' : pointsText(score));
     setText(this.when, agoText(c.created));

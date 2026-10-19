@@ -13,6 +13,7 @@ import { CommentView } from './comment';
 import { PostView } from './post';
 import { isOwn, type Ctx } from './shared';
 import { HighlightRows } from './highlights';
+import { PageName } from './pageName';
 import { SortTabs } from './sort';
 
 /** Posts the skin draws rows for: a feed's rows and the post at the top of a thread. */
@@ -29,6 +30,7 @@ export class SkinMount {
   private readonly comments = new Map<Element, CommentView>();
   private readonly tabs = new SortTabs();
   private readonly highlights = new HighlightRows();
+  private readonly pageName = new PageName();
   private observer: MutationObserver | null = null;
   private stopRows: (() => void) | null = null;
   private queued = new Set<Element>();
@@ -79,6 +81,7 @@ export class SkinMount {
     this.comments.clear();
     this.tabs.clear();
     this.highlights.clear();
+    this.pageName.clear();
   }
 
   /** Items the page just delivered (the module's onItems). */
@@ -131,6 +134,7 @@ export class SkinMount {
     this.prune();
     this.tabs.sync(this.route);
     this.highlights.sync();
+    this.pageName.sync(this.route);
     if (this.hasPending() && !this.retryTimer) this.startRetry();
   }
 

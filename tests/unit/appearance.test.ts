@@ -199,7 +199,7 @@ describe('subredditManager', () => {
     expect(shortcutHref('')).toBeNull();
     expect(shortcutLabel('r/aww', 'Cute')).toBe('Cute');
     expect(shortcutLabel('u/spez', '')).toBe('u/spez');
-    expect(shortcutLabel('askscience', undefined)).toBe('r/askscience');
+    expect(shortcutLabel('askscience', undefined)).toBe('askscience');
   });
 
   it('shows the chosen links in order, then rebuilds when the settings change', async () => {
@@ -223,7 +223,7 @@ describe('subredditManager', () => {
         a.getAttribute('href'),
       ]);
     expect(items()).toEqual([
-      ['r/askscience', '/r/askscience/'],
+      ['askscience', '/r/askscience/'],
       ['Cute', '/r/aww/'],
       ['u/spez/m/feed', '/user/spez/m/feed/'],
     ]);
@@ -231,7 +231,7 @@ describe('subredditManager', () => {
     subredditManager.onSettings!(
       changed(subredditManager, ctx, { showDefaults: true, subreddits: [] }) as never,
     );
-    expect(items().map((i) => i[0])).toEqual(['Home', 'r/all', 'r/popular']);
+    expect(items().map((i) => i[0])).toEqual(['Home', 'all', 'popular']);
     subredditManager.onSettings!(
       changed(subredditManager, ctx, { showDefaults: false, subreddits: [] }) as never,
     );

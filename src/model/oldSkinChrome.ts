@@ -20,6 +20,16 @@ export function chromeCss(): string {
     `${R} ${C.main} ${k.composerBar} { display: none !important; }`,
     // REScue's keyboard selection: a light band with a thin left rule, like RES on old Reddit.
     `${R} #${k.selectionBoxId} { border: 0 !important; border-left: 2px solid var(--os-head-line) !important; border-radius: 0 !important; box-shadow: none !important; background: color-mix(in srgb, var(--os-head) 35%, transparent) !important; }`,
+    // The header, closer to old Reddit's: a black wordmark, the page name in small capitals beside
+    // it, a plain narrow search box at the right and the account buttons in a light rounded box.
+    `${R} ${k.headerLogo} svg { height: 18px; width: auto; }`,
+    `${R} ${k.headerLogo} svg path { fill: var(--os-fg) !important; }`,
+    `${R} .rescue-opagename { margin-left: 8px; color: var(--os-fg); font: small-caps bold 14.4px var(--os-font); text-decoration: none; }`,
+    `${R} .rescue-opagename:hover { text-decoration: underline; }`,
+    `${R} ${k.headerSearch} { flex: 0 1 320px !important; margin-left: auto; }`,
+    `${R} ${k.headerSearch} > div, ${R} ${k.headerSearch} > div > div { position: static !important; width: 100% !important; margin: 0 !important; }`,
+    `${R} ${k.headerActions} { margin-left: 8px; padding: 0 6px; height: 34px; align-self: center; background: color-mix(in srgb, var(--os-bg) 70%, var(--os-head)); border-radius: 7px; }`,
+    `${R} ${k.headerAdvertise} { display: none !important; }`,
     // Pinned posts: old Reddit's green stickied rows in place of Reddit's highlight cards.
     `${R} ${k.highlights.carousel}[${k.highlights.shownAttr}] { display: none !important; }`,
     // Sort tabs: old Reddit's "best / hot / new / rising / controversial / top" strip.

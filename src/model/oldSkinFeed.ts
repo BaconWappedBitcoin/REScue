@@ -33,9 +33,9 @@ export function feedCss(o: OldSkinOptions): string {
     `${ROOT} ${C.feed} > ${C.postWrapper} { margin: 0 !important; }`,
     `${P} {
   counter-increment: osrank; display: grid !important; position: relative; overflow: clip;
-  grid-template-columns: ${rankW}px 46px ${px}px minmax(0, 1fr); grid-template-rows: auto; grid-auto-rows: 0;
+  grid-template-columns: ${rankW}px 58px ${px}px minmax(0, 1fr); grid-template-rows: auto; grid-auto-rows: 0;
   column-gap: 0; row-gap: 0; align-items: start;
-  background: transparent !important; border-radius: 0 !important; margin: 0 !important; padding: 0 !important;
+  background: transparent !important; border-radius: 0 !important; margin: 0 0 8px !important; padding: 0 !important;
   font-family: var(--os-font); font-size: 10px; color: var(--os-meta);
 }`,
     `${P}::before { content: ${rank}; grid-area: 1 / 1; color: var(--os-rank); font: normal 15px arial, sans-serif; text-align: right; padding: 16px ${o.rankNumbers ? 8 : 0}px 0 0; }`,
@@ -50,16 +50,16 @@ export function feedCss(o: OldSkinOptions): string {
     // A real thumbnail or media preview takes the thumbnail cell and the placeholder steps aside.
     `${P}:has(${s.thumbnail}:not(:empty)) > .rescue-oth, ${P}:has(> ${C.mediaContainer}) > .rescue-oth { display: none; }`,
     // Pieces drawn through a slot (Firefox): Reddit's thumbnail is out of reach, so the placeholder shows its picture.
-    ...(none ? [] : [`${P} > .rescue-oth[slot] { display: block !important; width: ${px}px; height: ${Math.round(px * 0.75)}px; }`]),
+    ...(none ? [] : [`${P} > .rescue-oth[slot] { display: block !important; width: ${px}px; height: ${px}px; }`]),
     // A video never plays in a feed under this look: Reddit's player is hidden from the first paint
     // (never on screen, so never autoplayed) and the thumbnail shows its poster (open the post to watch).
     `${ROOT} ${C.feed} :is(${C.post}, ${C.adPost}) ${k.videoPlayer}, ${P}:has(${k.videoPlayer}) > ${C.mediaContainer} { display: none !important; }`,
-    ...(none ? [] : [`${P}:has(${k.videoPlayer}) > .rescue-oth { display: block !important; width: ${px}px; height: ${Math.round(px * 0.75)}px; }`]),
+    ...(none ? [] : [`${P}:has(${k.videoPlayer}) > .rescue-oth { display: block !important; width: ${px}px; height: ${px}px; }`]),
     `${A} > ${k.wrapAThumb} { grid-area: 1 / 3; width: ${px}px; ${none ? 'display: none;' : ''} }`,
-    `${P} ${s.thumbnail} { width: ${px}px; height: auto; max-height: ${Math.round(px * 0.75)}px; border-radius: 0; }`,
+    `${P} ${s.thumbnail} { width: ${px}px; height: auto; max-height: ${px}px; border-radius: 0; }`,
     `${P} ${s.thumbnail} > a { width: 100%; height: auto; }`,
     // A large picture or video (shape B) shrinks to thumbnail size (zoom scales the whole box), or goes away.
-    `${P} > ${C.mediaContainer} { grid-area: 1 / 3; width: 583px; zoom: ${(px / 583).toFixed(4)}; height: 437px; overflow: hidden; background: var(--os-panel); margin: 4px 0 !important; ${none ? 'display: none;' : ''} }`,
+    `${P} > ${C.mediaContainer} { grid-area: 1 / 3; width: 583px; zoom: ${(px / 583).toFixed(4)}; height: 583px; overflow: hidden; background: var(--os-panel); margin: 4px 0 !important; ${none ? 'display: none;' : ''} }`,
     `${P} > ${C.mediaContainer} * { pointer-events: none; }`,
     // Reddit's credit bar stays alive (its overflow menu is how save / hide / report are pressed) but unseen.
     `${P} ${s.credit} { position: absolute !important; left: 0; top: 0; width: 1px; height: 1px; margin: 0 !important; padding: 0 !important; clip-path: inset(50%); pointer-events: none; }`,
@@ -69,9 +69,9 @@ export function feedCss(o: OldSkinOptions): string {
     `${scoped(P, '.rescue-hide-link')} { display: none; }`,
     // Pinned posts (modules/appearance/oldSkin/highlights.ts): the feed's own columns, a green title.
     `${ROOT} .rescue-osticky { margin: 2px 0 4px; }`,
-    `${ROOT} .rescue-ostick { display: grid; grid-template-columns: ${rankW}px 46px ${px}px minmax(0, 1fr); align-items: start; font-family: var(--os-font); font-size: 10px; color: var(--os-meta); }`,
+    `${ROOT} .rescue-ostick { display: grid; margin: 0 0 8px; grid-template-columns: ${rankW}px 58px ${px}px minmax(0, 1fr); align-items: start; font-family: var(--os-font); font-size: 10px; color: var(--os-meta); }`,
     `${ROOT} .rescue-ostick > .rescue-ostick-vote { grid-column: 2; display: flex; justify-content: center; padding-top: 18px; }`,
-    `${ROOT} .rescue-ostick > .rescue-oth { grid-column: 3; width: ${px}px; height: ${Math.round(px * 0.75)}px; ${none ? 'display: none;' : ''} }`,
+    `${ROOT} .rescue-ostick > .rescue-oth { grid-column: 3; width: ${px}px; height: ${px}px; ${none ? 'display: none;' : ''} }`,
     `${ROOT} .rescue-ostick > .rescue-obody { grid-column: 4; padding-left: ${none ? 0 : 8}px; }`,
     `${ROOT} .rescue-ostick-title { color: var(--os-sticky) !important; }`,
     `${ROOT} .rescue-ostick-word { color: var(--os-sticky); font-weight: bold; }`,

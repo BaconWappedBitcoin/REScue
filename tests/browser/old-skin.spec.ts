@@ -10,6 +10,8 @@ import { POSTS, postHtml, nestedCommentsHtml, threadComments } from '../fixtures
 // own rows are only hidden while REScue's are mounted.
 const LISTING = 'https://www.reddit.com/r/science/';
 const THREAD = 'https://www.reddit.com/r/Layoffs/comments/text1/got_laid_off/';
+/** The same thread, where the reader (me_the_reader) wrote some of the comments. */
+const MY_THREAD = 'https://www.reddit.com/r/Layoffs/comments/text1/got_laid_off/?mine=1';
 const PROFILE = 'https://www.reddit.com/user/alice/';
 let ctx: BrowserContext;
 
@@ -86,12 +88,12 @@ for (const c of document.querySelectorAll('shreddit-comment')) {
   const reply = document.createElement('button'); reply.textContent = 'Reply';
   reply.addEventListener('click', () => { window.__clicks.push(id + ':reply'); const box = document.createElement('textarea'); box.id = 'reply-box-' + id; c.appendChild(box); });
   tracker.appendChild(reply); row.appendChild(tracker);
-  const menu = document.createElement('shreddit-overflow-menu'); menu.setAttribute('slot', 'overflow');
+  const menu = document.createElement('shreddit-overflow-menu'); menu.setAttribute('slot', 'overflow'); if (c.getAttribute('author') === 'me_the_reader') menu.setAttribute('is-send-replies', '');
   const mr = menu.attachShadow({ mode: 'open' });
-  mr.innerHTML = '<button id="overflow-trigger" aria-expanded="false">…</button><div class="items" hidden><div role="menuitem">Save</div><div role="menuitem">Report</div></div>';
+  mr.innerHTML = '<button id="overflow-trigger" aria-expanded="false">…</button><div class="items" hidden><div role="menuitem">Save</div><div role="menuitem">Report</div>' + (c.getAttribute('author') === 'me_the_reader' ? '<div role="menuitem">Disable inbox replies</div><div role="menuitem">Delete</div>' : '') + '</div>';
   const t = mr.querySelector('#overflow-trigger'); const items = mr.querySelector('.items');
   t.addEventListener('click', () => { items.hidden = !items.hidden; t.setAttribute('aria-expanded', String(!items.hidden)); });
-  for (const it of mr.querySelectorAll('[role=menuitem]')) it.addEventListener('click', () => { window.__clicks.push(id + ':item-' + it.textContent); items.hidden = true; t.setAttribute('aria-expanded', 'false'); if (it.textContent === 'Save') it.textContent = 'Unsave'; });
+  for (const it of mr.querySelectorAll('[role=menuitem]')) it.addEventListener('click', () => { window.__clicks.push(id + ':item-' + it.textContent); items.hidden = true; t.setAttribute('aria-expanded', 'false'); if (it.textContent === 'Save') it.textContent = 'Unsave'; else if (it.textContent === 'Disable inbox replies') { it.textContent = 'Enable inbox replies'; menu.removeAttribute('is-send-replies'); } else if (it.textContent === 'Enable inbox replies') { it.textContent = 'Disable inbox replies'; menu.setAttribute('is-send-replies', ''); } });
   row.appendChild(menu);
   const grid = document.createElement('div'); grid.className = 'grid';
   const box = document.createElement('div'); box.appendChild(row); grid.appendChild(box);
@@ -106,16 +108,19 @@ const shell = (inner: string, signedIn: boolean) =>
 
 const listing = (signedIn = true, extra = '') =>
   htmlDoc(
-    shell(`${SORT}<shreddit-feed>${POSTS.slice(0, 3).map(postHtml).join('')}</shreddit-feed>`, signedIn) +
+    shell(
+      `${SORT}<shreddit-feed>${POSTS.slice(0, 3).map(postHtml).join('')}</shreddit-feed>`,
+      signedIn,
+    ) +
       extra +
       POST_SCRIPT,
     '<style>shreddit-post { display: block }</style>',
   );
-const thread = (signedIn = true) =>
+const thread = (signedIn = true, author?: string) =>
   htmlDoc(
     shell(
       postHtml(POSTS[0]!).replace(/^<article>|<\/article>$/g, '') +
-        nestedCommentsHtml(threadComments(), false, true),
+        nestedCommentsHtml(threadComments(author), false, true),
       signedIn,
     ) +
       POST_SCRIPT +
@@ -129,7 +134,12 @@ const profile = () =>
 let pages: Record<string, string> = {};
 test.beforeEach(async () => {
   ctx = await launchWithExtension();
-  pages = { [LISTING]: listing(), [THREAD]: thread(), [PROFILE]: profile() };
+  pages = {
+    [LISTING]: listing(),
+    [THREAD]: thread(),
+    [MY_THREAD]: thread(true, 'me_the_reader'),
+    [PROFILE]: profile(),
+  };
   await ctx.route(/^https:\/\/(www|sh)\.reddit\.com\//, (route) => {
     const body = pages[route.request().url().split('#')[0]!];
     return body
@@ -192,7 +202,9 @@ test('on: a feed row is the old row: rank, vote column, title line, tagline, fla
   expect(await p.evaluate((e) => getComputedStyle(e, '::before').content)).toBe('counter(osrank)');
   await expect(page.locator('#left-sidebar-container')).toBeHidden();
   await expect(p.locator('.rescue-otitle')).toHaveText(POSTS[0]!.title!);
-  expect(await p.locator('.rescue-otitle').evaluate((e) => getComputedStyle(e).color)).toBe('rgb(0, 0, 255)');
+  expect(await p.locator('.rescue-otitle').evaluate((e) => getComputedStyle(e).color)).toBe(
+    'rgb(0, 0, 255)',
+  );
   await expect(p.locator('.rescue-otag')).toContainText(/^submitted .+ by rockpaperblr/);
   await expect(p.locator('.rescue-olinks')).toContainText('comments');
   for (const word of ['share', 'save', 'hide', 'report']) {
@@ -219,7 +231,8 @@ test('the tagline keeps REScue’s tag / ignore buttons right after the author',
   await expect(tag.locator('.rescue-oauthor + *')).toBeVisible();
   const kinds = await tag.locator('.rescue-btn').count();
   expect(kinds).toBeGreaterThan(0);
-  for (let i = 0; i < kinds; i++) expect(await reachable(tag.locator('.rescue-btn').nth(i))).toBe(true);
+  for (let i = 0; i < kinds; i++)
+    expect(await reachable(tag.locator('.rescue-btn').nth(i))).toBe(true);
 });
 
 test('dark: follows Reddit’s dark mode with the dark classic palette', async () => {
@@ -240,7 +253,11 @@ test('the vote column votes through Reddit’s own buttons and shows what they s
   await expect.poll(() => clicks(page)).toContain(`${POSTS[0]!.id}:vote-up-on`);
   await expect(p.locator('.rescue-ovote')).toHaveAttribute('data-vote', 'up');
   await expect(score).toHaveText('8480'); // moved by the confirmed vote; the page's number is stale
-  expect(await p.evaluate((e) => e.shadowRoot!.querySelector('button[upvote]')!.getAttribute('aria-pressed'))).toBe('true');
+  expect(
+    await p.evaluate((e) =>
+      e.shadowRoot!.querySelector('button[upvote]')!.getAttribute('aria-pressed'),
+    ),
+  ).toBe('true');
   await p.locator('.rescue-oup').click(); // the same arrow clears it
   await expect.poll(() => clicks(page)).toContain(`${POSTS[0]!.id}:vote-up-off`);
   await expect(score).toHaveText('8479');
@@ -369,7 +386,9 @@ test('the REScue menu switch turns it all on and off live; off leaves nothing of
   await row.click();
   await expect(page.locator('html')).not.toHaveAttribute('data-rescue-skin', 'old');
   await expect(page.locator('#rescue-old-skin')).toHaveCount(0);
-  await expect(page.locator('.rescue-ovote, .rescue-obody, .rescue-oth, .rescue-otabs')).toHaveCount(0);
+  await expect(
+    page.locator('.rescue-ovote, .rescue-obody, .rescue-oth, .rescue-otabs'),
+  ).toHaveCount(0);
   await expect(page.locator('[data-rescue-ov], [data-rescue-tabs]')).toHaveCount(0);
   await expect(page.locator('shreddit-sort-dropdown')).toBeVisible();
   expect(await post(page).evaluate((e) => getComputedStyle(e).display)).not.toBe('grid');
@@ -386,7 +405,11 @@ test('turning it off on a thread restores Reddit’s comment action row', async 
   await page.locator('#rescue-menu [data-menu-id="quick:oldLook"]').click();
   await expect(first).not.toHaveAttribute('data-rescue-ov', '1');
   await expect(page.locator('.rescue-ovote, .rescue-ocl, .rescue-opts')).toHaveCount(0);
-  const own = await first.locator('shreddit-comment-action-row').first().locator('xpath=..').boundingBox();
+  const own = await first
+    .locator('shreddit-comment-action-row')
+    .first()
+    .locator('xpath=..')
+    .boundingBox();
   expect(own === null || own.width > 1).toBe(true);
 });
 
@@ -394,6 +417,30 @@ test('options apply: no thumbnail column and no rank numbers', async () => {
   const page = await open(LISTING, { thumbnails: 'none', rankNumbers: false });
   await expect(page.locator('html')).toHaveAttribute('data-rescue-skin', 'old');
   const cols = await post(page).evaluate((e) => getComputedStyle(e).gridTemplateColumns);
-  expect(cols.startsWith('0px 46px 0px')).toBe(true);
+  expect(cols.startsWith('0px 58px 0px')).toBe(true);
   expect(await post(page).evaluate((e) => getComputedStyle(e, '::before').content)).toBe('""');
+});
+
+test('your own comments get edit, inbox replies and delete, pressing Reddit’s own menu rows', async () => {
+  const page = await open(MY_THREAD, {});
+  // One of the reader's comments with no replies, so its link row is the only one inside it.
+  const mine = page
+    .locator('shreddit-comment[author="me_the_reader"]:not(:has(shreddit-comment))')
+    .first();
+  const theirs = page
+    .locator('shreddit-comment:not([author="me_the_reader"]):not(:has(shreddit-comment))')
+    .first();
+  await expect(mine).toHaveAttribute('data-rescue-ov', '1');
+  const row = mine.locator('.rescue-ocl').first();
+  for (const word of ['edit', 'disable inbox replies', 'delete']) {
+    await expect(row.getByText(word, { exact: true })).toBeVisible();
+  }
+  await expect(theirs.locator('.rescue-ocl').first()).not.toContainText('inbox');
+  await expect(theirs.locator('.rescue-ocl').first()).not.toContainText('delete');
+  const id = await mine.getAttribute('thingid');
+  await row.getByText('disable inbox replies', { exact: true }).click();
+  await expect.poll(() => clicks(page)).toContain(`${id}:item-Disable inbox replies`);
+  await expect(row.getByText('enable inbox replies', { exact: true })).toBeVisible();
+  await row.getByText('delete', { exact: true }).click();
+  await expect.poll(() => clicks(page)).toContain(`${id}:item-Delete`);
 });

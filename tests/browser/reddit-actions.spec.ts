@@ -204,7 +204,8 @@ test('a menu without a Save row is never clicked: it says so instead', async () 
   const page = await open(LISTING, listingPage(true, true));
   await selectFirst(page);
   await page.keyboard.press('s');
-  await expect(page.getByText(/could not find Reddit.s Save item/)).toBeVisible();
+  // REScue waits up to ~4 s for a lazily drawn menu row before saying it is not there.
+  await expect(page.getByText(/could not find Reddit.s Save item/)).toBeVisible({ timeout: 12000 });
   await page.waitForTimeout(400);
   // The menu was opened and closed to look, but no row was ever pressed.
   expect((await clicks(page)).some((c) => c.includes(':item-'))).toBe(false);

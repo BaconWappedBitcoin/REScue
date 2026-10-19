@@ -152,7 +152,7 @@ Conditions for “Only when browsing”: ${BROWSE_HELP}`,
       title: 'Comment filters',
       description: `Type “custom” takes a condition in the Pattern column (join with and / or / not and parentheses, e.g. length<20w and score<0). Conditions for comments:
 ${COMMENT_CONDITION_HELP}
-keyword: text or /regex/ in the comment’s own text. user: the author, exactly. deleted: deleted or removed comments (no pattern). depth: this deep or deeper (0 is a top-level comment). score-below / score-above: a whole number; comments whose score is hidden or not yet loaded are never matched. Collapse keeps replies visible; hide removes the comment and its replies from view. “Only when browsing” limits a row to where or when you are browsing (front, onsub:name, onmulti:name, onuser:name, location:/regex/, loggedin:name, toggle:name, date:A..B, dow:sat,sun, hour:22..6).`,
+keyword: text or /regex/ in the comment’s own text. user: the author, exactly. deleted: deleted or removed comments (no pattern). low-effort: replies that only agree, such as “This!”, “100%”, “I agree” (no pattern). depth: this deep or deeper (0 is a top-level comment). score-below / score-above: a whole number; comments whose score is hidden or not yet loaded are never matched. Collapse keeps replies visible; hide removes the comment and its replies from view. “Only when browsing” limits a row to where or when you are browsing (front, onsub:name, onmulti:name, onuser:name, location:/regex/, loggedin:name, toggle:name, date:A..B, dow:sat,sun, hour:22..6).`,
       columns: [
         { key: 'type', title: 'Type', type: 'enum', values: COMMENT_RULE_TYPES },
         { key: 'pattern', title: 'Pattern', type: 'text' },
@@ -168,9 +168,22 @@ keyword: text or /regex/ in the comment’s own text. user: the author, exactly.
       ],
       validateRow: (row) => {
         const r = row as unknown as CommentRule;
-        if (r.type !== 'deleted' && !String(r.pattern ?? '').trim()) return null;
+        if (r.type !== 'deleted' && r.type !== 'low-effort' && !String(r.pattern ?? '').trim())
+          return null;
         return validateCommentRule({ ...r, pattern: String(r.pattern ?? '') });
       },
+    },
+    hideLowEffort: {
+      type: 'enum',
+      default: 'collapse',
+      title: 'Low-effort replies',
+      description:
+        'Comments that only agree, such as “This!”, “100%”, “I agree”, “Exactly”, “So much this”, “+1” or “^”: at most six words, all of them agreement or filler words. Questions and picture-only comments are never counted. Collapse keeps the replies under them visible.',
+      values: [
+        { value: 'collapse', label: 'Collapse them' },
+        { value: 'hide', label: 'Hide them and their replies' },
+        { value: 'off', label: 'Leave them alone' },
+      ],
     },
     hideNsfw: { type: 'boolean', default: false, title: 'Hide all NSFW posts' },
     nsfwAllowList: {

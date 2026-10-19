@@ -23,7 +23,17 @@ import { agoText, commentsText, domainText } from '../../../model/oldSkinText';
 import type { Post } from '../../../model/types';
 import type { ActionResult } from '../../../core/actions';
 import type { Route } from '../../../core/types';
-import { ANCHOR_ATTR, failureText, MOUNT_ATTR, onActivate, say, setAttr, setText, slotPieces, type Ctx } from './shared';
+import {
+  ANCHOR_ATTR,
+  failureText,
+  MOUNT_ATTR,
+  onActivate,
+  say,
+  setAttr,
+  setText,
+  slotPieces,
+  type Ctx,
+} from './shared';
 import { nativeVote, VoteBox } from './vote';
 
 /** Listings that mix subreddits show "to r/sub"; a subreddit's own feed and a thread do not. */
@@ -121,6 +131,10 @@ export class PostView {
     onActivate(this.title, (e) => {
       if (this.title.getAttribute('href') === this.post?.permalink) this.openPost(e);
     });
+    // The thumbnail opens what the title opens, as on old Reddit: under the skin Reddit's own
+    // whole-card link is switched off, so a click on the picture would otherwise do nothing.
+    host.addEventListener('click', (e) => this.openFromThumb(e as MouseEvent), true);
+    host.addEventListener('auxclick', (e) => this.openFromThumb(e as MouseEvent), true);
     host.append(this.vote.el, this.thumb, this.body);
     slotPieces(host, [this.vote.el, this.thumb, this.body]);
     this.render(first);
@@ -155,6 +169,25 @@ export class PostView {
     } finally {
       setAttr(this.save, 'aria-busy', null);
     }
+  }
+
+  private openFromThumb(e: MouseEvent): void {
+    const t = e.target instanceof Element ? e.target : null;
+    if (!t || (t !== this.thumb && t.closest(C.mediaContainer)?.parentElement !== this.host))
+      return;
+    if (e.button > 1) return;
+    const href = this.title.getAttribute('href');
+    if (!href) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.button === 1 || e.ctrlKey || e.metaKey || e.shiftKey)
+      window.open(href, '_blank', 'noopener');
+    else if (
+      href === this.post?.permalink &&
+      this.host.querySelector(':scope > a[slot="full-post-link"]')
+    )
+      this.openPost(e);
+    else location.assign(href);
   }
 
   private openPost(e: MouseEvent): void {

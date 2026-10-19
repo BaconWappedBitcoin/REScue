@@ -32,8 +32,8 @@ export default defineConfig({
     // user also granted, and *.redd.it stays optional: blocking is still opt-in.
     permissions:
       browser === 'firefox'
-        ? ['storage', 'unlimitedStorage', 'declarativeNetRequestWithHostAccess']
-        : ['storage', 'unlimitedStorage'],
+        ? ['storage', 'unlimitedStorage', 'scripting', 'declarativeNetRequestWithHostAccess']
+        : ['storage', 'unlimitedStorage', 'scripting'],
     host_permissions: REDDIT_MATCHES,
     // Asked for only when the user turns on "Block media downloads" (inlineMedia), from the
     // extension's own permission page; nothing here is granted at install.

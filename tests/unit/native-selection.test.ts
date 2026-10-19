@@ -254,6 +254,15 @@ describe('selection outline area', () => {
     expect(areaOf(sel.current()!)).toMatchObject({ top: 100, bottom: 120 });
   });
 
+  it('stops at a collapsed comment’s own edge even when its hidden body still measures full height (Firefox)', () => {
+    sel.select('t1_c0');
+    const host = sel.current()!.host;
+    stub(host, rect(100, 120)); // collapsed: only the head line is left
+    stub(host.querySelector('[slot="commentMeta"]')!, rect(100, 118));
+    stub(host.querySelector(':scope > [slot="comment"]')!, rect(118, 371)); // still laid out
+    expect(areaOf(sel.current()!)).toMatchObject({ top: 100, bottom: 120 });
+  });
+
   it('falls back to the first lines of the host when nothing else can be measured', () => {
     sel.select('t1_c0');
     const host = sel.current()!.host;

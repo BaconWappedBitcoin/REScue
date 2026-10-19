@@ -221,9 +221,13 @@ export class FilterSession {
       ...(rows as unknown as FilterRule[]),
       ...(ctx.options.hideNsfw ? [hideNsfwRule(asRows(ctx.options.nsfwAllowList))] : []),
     ]);
-    const comments = compileCommentRules(
-      asRows(ctx.options.commentRules) as unknown as CommentRule[],
-    );
+    const lowEffort = ctx.options.hideLowEffort;
+    const comments = compileCommentRules([
+      ...(asRows(ctx.options.commentRules) as unknown as CommentRule[]),
+      ...(lowEffort === 'collapse' || lowEffort === 'hide'
+        ? [{ type: 'low-effort', pattern: '', action: lowEffort, enabled: true } as CommentRule]
+        : []),
+    ]);
     this.rules = posts.rules;
     this.commentRules = comments.rules;
     this.syncRowWatch();

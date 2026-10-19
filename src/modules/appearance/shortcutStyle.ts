@@ -28,11 +28,14 @@ export const STYLE = [
   `${B} .rescue-sc{display:inline-flex;align-items:center;border-radius:3px}`,
   `${B} .rescue-sc.rescue-sc-over{outline:2px solid var(--rescue-accent,#336699)}`,
   `${B} .rescue-sc.rescue-sc-dragging{opacity:.4}`,
-  `${B} .rescue-sc-edit{padding:0 2px;opacity:0;font-size:11px}`,
-  // The edit word appears after the edit dropdown delay on hover (RES shortcutEditDropdownDelay) and
-  // at once for the keyboard; leaving hides it at once (the transition of the end state governs).
-  `${B} .rescue-sc:hover .rescue-sc-edit{opacity:1;transition:opacity 0s linear var(--rescue-sc-edit-delay,0ms)}`,
-  `${B} .rescue-sc:focus-within .rescue-sc-edit{opacity:1}`,
+  // The edit word takes no room until it shows (it was an invisible gap after every shortcut): it
+  // opens after the edit dropdown delay on hover (RES shortcutEditDropdownDelay), at once for the
+  // keyboard, and leaving closes it at once (the transition of the end state governs).
+  `${B} .rescue-sc-edit{max-width:0;overflow:hidden;padding:0;opacity:0;font-size:11px}`,
+  `${B} .rescue-sc:hover .rescue-sc-edit{max-width:4em;padding:0 2px;opacity:1;transition:max-width 0s linear var(--rescue-sc-edit-delay,0ms),padding 0s linear var(--rescue-sc-edit-delay,0ms),opacity 0s linear var(--rescue-sc-edit-delay,0ms)}`,
+  `${B} .rescue-sc:focus-within .rescue-sc-edit{max-width:4em;padding:0 2px;opacity:1}`,
+  // While a shortcut is dragged no edit word opens, so the shortcuts do not move under the pointer.
+  `${B}:has(.rescue-sc-dragging) .rescue-sc-edit{max-width:0!important;padding:0!important;opacity:0!important}`,
   `${B}[data-rescue-uppercase] .rescue-sc-viewport a{text-transform:uppercase}`,
   `${B} .rescue-sc a:focus-visible,${B} button:focus-visible{outline:2px solid var(--rescue-accent,#336699)}`,
   `${B} .rescue-sc-group>a::after{content:" ▴";font-size:9px}`,

@@ -191,7 +191,7 @@ test('the shortcut bar lists the chosen subreddits in order, apart from Reddit�
   const page = await ctx.newPage();
   await page.goto(THREAD);
   const bar = page.locator('#rescue-subreddit-bar');
-  await expect(bar.locator('a')).toHaveText(['r/askscience', 'Cute', 'u/spez/m/feed']);
+  await expect(bar.locator('a')).toHaveText(['askscience', 'Cute', 'u/spez/m/feed']);
   await expect(bar.locator('a').nth(1)).toHaveAttribute('href', '/r/aww/');
   await expect(bar).toHaveCSS('position', 'fixed');
 
@@ -215,12 +215,12 @@ test('the “+ r/name” button adds the subreddit you are in, live', async () =
   const page = await ctx.newPage();
   await page.goto(LISTING);
   const bar = page.locator('#rescue-subreddit-bar');
-  await expect(bar.locator('a')).toHaveText(['r/aww']);
+  await expect(bar.locator('a')).toHaveText(['aww']);
   await bar.getByRole('button', { name: '+ r/programming' }).click();
-  await expect(bar.locator('a')).toHaveText(['r/aww', 'r/programming']);
+  await expect(bar.locator('a')).toHaveText(['aww', 'programming']);
   // The same button now removes it (the toggle).
   await expect(bar.locator('[data-rescue-toggle="remove"]')).toHaveText('− r/programming');
-  await expect(bar.locator('a[aria-current="page"]')).toHaveText('r/programming');
+  await expect(bar.locator('a[aria-current="page"]')).toHaveText('programming');
 });
 
 test('back to top scrolls the page to the top from the REScue menu', async () => {
