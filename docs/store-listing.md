@@ -72,8 +72,8 @@ What REScue provides:
 
 What REScue does not do, because modern Reddit already does it (the full list is in the feature
 matrix): endless scrolling, inline images, galleries and video, crosspost cards, spoiler tags, and
-community hover cards. Some RES features cannot be done on modern Reddit at all, for example voting
-on comments from the keyboard, because Reddit hides those buttons from extensions. A few features
+community hover cards. Some RES features cannot be done on modern Reddit at all, for example comment depth and context
+links, because Reddit ignores them. A few features
 (search helper, logo link, shortcut bar) depend on parts of Reddit's page that may change, and are
 marked as such in the settings console.
 

@@ -50,6 +50,31 @@ instead of breaking the page.
 There are about 60 modules in all, grouped as **listings, comments, users, actions, appearance and
 core** in the settings console. Each has a plain-language description and per-option explanations.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/old-feed.png" alt="r/science in REScue's Old Reddit look: rank numbers, vote column, small thumbnails, blue titles with flair and domain, old-style taglines with tag/ignore words and audience-lean chips" width="900">
+  <br><em>The Old Reddit look on r/science, with REScue's tag and ignore words and the neutrality chips.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/old-thread.png" alt="A comment thread in the Old Reddit look: [–] author, points, age, and permalink save report reply under each comment" width="900">
+  <br><em>Comment threads: old-style comment heads and link rows, "hide child comments" and "↑ parent".</em>
+</p>
+
+<table>
+  <tr>
+    <td width="45%"><img src="docs/screenshots/native-feed.png" alt="Reddit's own layout with REScue's tag user, ignore, [l+c], upvote ratio, filter and lean chip added to each post"></td>
+    <td><img src="docs/screenshots/keyboard-help.png" alt="REScue's keyboard shortcut overlay over the Old Reddit look"></td>
+  </tr>
+  <tr>
+    <td><em>Without the Old Reddit look: REScue adds its words to Reddit's own layout.</em></td>
+    <td><em>Press <code>?</code> for every keyboard shortcut.</em></td>
+  </tr>
+</table>
+
+Screenshots are taken signed out, and other people's usernames are replaced with placeholders.
+
 ## Install
 
 **From the stores:** coming soon to the Chrome Web Store and Firefox Add-ons.
@@ -71,6 +96,49 @@ npm run build:firefox    # Firefox: .output/firefox-mv3/
   it restarts.
 
 Then open Reddit. The **REScue** button in Reddit's header opens the menu and the settings console.
+
+## Compared with Reddit Enhancement Suite
+
+RES was written for old.reddit.com. Some of what it did, modern Reddit now does itself. Some of it
+can't work any more, because the parts of Reddit it relied on no longer exist. REScue rebuilds the
+rest.
+
+The project's own audit checks every RES option and control, 706 in all:
+
+| | Options | What it means |
+|---|---:|---|
+| **In REScue** | 363 | Works on modern Reddit. |
+| **Partly** | 84 | The main behaviour works; details differ (each one is noted in the audit). |
+| **Reddit does it** | 47 | Modern Reddit has its own version, so REScue doesn't duplicate it. |
+| **Obsolete** | 132 | The Reddit feature it changed is gone (old Reddit's sidebar, per-subreddit CSS, `?depth=` links and so on). |
+| **Not yet** | 80 | Possible, but each needs a workaround that hasn't been built yet. |
+
+By RES module:
+
+| RES module | REScue |
+|---|---|
+| **Settings, backup and restore, presets, command line, troubleshooter** | In REScue. Backup is a file you keep, or your browser's own sync; there is no Dropbox or Google Drive. Your RES backup's tags and filters can be imported. |
+| **filteReddit** | In REScue: keywords, subreddits, domains, users, flair and NSFW, each with a reason and a way to reveal it. |
+| **Keyboard navigation** | In REScue: `j`/`k`, open, vote, save, hide, go-to keys and the help overlay. Voting on comments from the keyboard works through Reddit's own buttons. |
+| **User tagger, user highlight** | In REScue: tags, colours, ignore (now with an ignore button), vote tally, and highlights for moderators, friends and tagged users. |
+| **Comment navigator, hide child comments, show parent, remember collapsed comments, new comment count, saved comments, table tools** | In REScue. |
+| **Never-ending Reddit** | Reddit scrolls endlessly by itself. REScue adds RES's pause, "load more" and "pause after N pages", and can load the next page sooner. |
+| **Inline images and expandos (showImages)** | Reddit shows media inline itself. REScue adds hiding media in comments, a media viewer, and blocking media downloads. |
+| **Subreddit shortcut bar, subreddit tagger, logo link, search helper, local date, custom CSS, style tweaks, username hider, page navigator** | In REScue, adapted to Reddit's current page. Some are partial where Reddit keeps an element out of reach. |
+| **Auto-hide read posts, single click, cross-post links, wheel browse, quarantine notice, vote enhancements** | In REScue. |
+| **Show karma, penalty box, dashboard** | Partly. |
+| **Night mode, spoiler tags, hover cards, multireddit bar, comment preview, "more replies"** | Reddit does these itself. |
+| **Comment depth, context links, per-subreddit styles, account switcher, report-as-spam** | Obsolete or excluded. Reddit ignores `?depth=` and `?context=`, has no subreddit CSS, and switches accounts itself. RES's account switcher stored passwords, which REScue never does. |
+| **View source, comment macros, submit helper, message menu, mod helper** | Not yet. |
+
+**REScue extras** that RES never had: the Old Reddit look, the neutrality filter, hiding promoted
+posts and "Suggested communities", an ignore button on posts and comments, a front-page sort, and
+loading the next page sooner.
+
+The full option-by-option audit is in
+[`specs/001-rescue-foundation/res-option-parity.md`](specs/001-rescue-foundation/res-option-parity.md),
+and the module-level matrix is in
+[`feature-matrix.md`](specs/001-rescue-foundation/feature-matrix.md).
 
 ## Privacy
 
