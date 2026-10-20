@@ -22,6 +22,7 @@ import { removeStyle, setStyle } from './injectedStyle';
 import { writeSkinMirror } from './oldSkin/early';
 import { SkinMount } from './oldSkin/mount';
 import { setFeedTabs } from './oldSkin/sort';
+import { holdTop, releaseTop } from './oldSkin/permalinkTop';
 import type { FeedKey } from '../../model/oldSkinText';
 
 const FEED_OPTIONS: ReadonlyArray<[string, FeedKey]> = [
@@ -31,6 +32,13 @@ const FEED_OPTIONS: ReadonlyArray<[string, FeedKey]> = [
 const applyFeedTabs = (options: Record<string, unknown>): void =>
   setFeedTabs(new Set(FEED_OPTIONS.filter(([o]) => options[o] === true).map(([, k]) => k)));
 import type { Ctx } from './oldSkin/shared';
+
+/** A comment link opens at the top with the post in view, as on old Reddit (option permalinkTop). */
+function openAtTop(route: Route, options: Record<string, unknown>): void {
+  if (options.permalinkTop !== false && route.kind === 'thread' && skinApplies(route))
+    holdTop(route.path);
+  else releaseTop();
+}
 
 export const SKIN_STYLE_ID = 'rescue-old-skin';
 export const MODULE_ID = 'oldRedditSkin';
@@ -113,6 +121,13 @@ export const oldRedditSkin = defineModule({
       title: 'Hide the subreddit banner',
       description: 'Drops the large banner picture and icon at the top of a subreddit.',
     },
+    permalinkTop: {
+      type: 'boolean',
+      default: true,
+      title: 'Open comment links at the top',
+      description:
+        'A link to one comment opens with the post in view, as on old Reddit, instead of Reddit jumping down past the post to the comment.',
+    },
     darkBlack: {
       type: 'boolean',
       default: true,
@@ -128,6 +143,7 @@ export const oldRedditSkin = defineModule({
     setStyle(SKIN_STYLE_ID, oldSkinCss(ctx.options as OldSkinOptions));
     applySkinAttribute(ctx.route);
     syncMount(ctx as unknown as Ctx, ctx.route);
+    openAtTop(ctx.route, ctx.options);
   },
 
   onItems(batch) {
@@ -137,6 +153,7 @@ export const oldRedditSkin = defineModule({
   onRoute(route, ctx) {
     applySkinAttribute(route);
     syncMount(ctx as unknown as Ctx, route);
+    openAtTop(route, ctx.options);
   },
 
   onSettings(ctx) {
@@ -148,6 +165,7 @@ export const oldRedditSkin = defineModule({
   },
 
   dispose() {
+    releaseTop();
     // Off (or replaced by a newer REScue, which writes it again): no early look on the next load.
     writeSkinMirror(null);
     mount?.stop();

@@ -62,6 +62,10 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
     since: '0.1.3',
     text: 'In the Old Reddit look, [+] on a collapsed comment now loads its replies in one click, gallery arrows work on a post’s page, and Reddit-hosted images open the post instead of a broken image link.',
   },
+  {
+    since: '0.1.4',
+    text: 'In the Old Reddit look, a link to one comment opens at the top with the post in view, as on old Reddit (settings › Old Reddit look › Open comment links at the top).',
+  },
 ];
 
 /** The new-feature tips an update from `from` to `to` brings. */
