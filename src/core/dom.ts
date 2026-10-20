@@ -1,4 +1,5 @@
 /** Tiny DOM builder, escaping, body-HTML sanitizer, and formatting helpers. */
+import { stamp } from './instance';
 
 type Child = Node | string | number | null | undefined | false;
 type Attrs = Record<string, string | number | boolean | null | undefined | EventListener>;
@@ -24,7 +25,8 @@ export function h<K extends keyof HTMLElementTagNameMap>(
     if (c === null || c === undefined || c === false) continue;
     el.append(c instanceof Node ? c : document.createTextNode(String(c)));
   }
-  return el;
+  // Owned by this instance, so a newer one (after an add-on reload) sweeps it up (instance.ts).
+  return stamp(el);
 }
 
 const ESC: Record<string, string> = {

@@ -47,6 +47,8 @@ export const STALE_ATTRS = [
   'data-rescue-hidden',
   'data-rescue-collapsed',
   'data-rescue-selected',
+  // The old Reddit look's "rows drawn" mark on posts and comments: the new instance draws them again.
+  'data-rescue-ov',
   // The old Reddit look's switch on <html>: a new instance sets it again if its module is on.
   'data-rescue-skin',
 ];

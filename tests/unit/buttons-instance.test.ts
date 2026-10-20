@@ -9,6 +9,7 @@ import {
   takeOver,
 } from '../../src/core/instance';
 import { rescueButton, rescueLink } from '../../src/core/buttons';
+import { h } from '../../src/core/dom';
 import { BUTTON_CSS } from '../../src/core/buttonStyle';
 import { THEME_CSS } from '../../src/core/theme';
 
@@ -72,6 +73,16 @@ describe('single live instance per page', () => {
     expect(document.body.contains(orphan)).toBe(false);
     sweepOwn(mine.token);
     expect(document.body.contains(own)).toBe(false);
+  });
+  it('sweeps what an older instance built (the old look’s page name) and lets the new one redraw rows', () => {
+    takeOver(() => {});
+    const name = h('a', { class: 'rescue-opagename' }, 'vibecoding');
+    const post = document.createElement('div');
+    post.setAttribute('data-rescue-ov', '1');
+    document.body.append(name, post);
+    takeOver(() => {}); // the add-on was reloaded: a new instance takes over
+    expect(document.body.contains(name)).toBe(false);
+    expect(post.hasAttribute('data-rescue-ov')).toBe(false);
   });
 });
 

@@ -44,10 +44,13 @@ export default defineConfig({
           browser_specific_settings: {
             gecko: {
               id: 'rescue@rescue-extension',
-              strict_min_version: '128.0',
+              // 140: the first version that reads data_collection_permissions (AMO warns otherwise).
+              strict_min_version: '140.0',
               // AMO's declaration that the add-on collects and transmits no data.
               data_collection_permissions: { required: ['none'] },
             },
+            // Firefox for Android reads data_collection_permissions from 142.
+            gecko_android: { strict_min_version: '142.0' },
           },
         }
       : { minimum_chrome_version: '120' }),
