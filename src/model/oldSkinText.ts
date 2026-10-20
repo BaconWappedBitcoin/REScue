@@ -13,8 +13,7 @@ const DAY = 24 * HOUR;
 export function agoText(then: Date | null, now: number = Date.now()): string {
   if (!then || Number.isNaN(then.getTime())) return '';
   const ms = Math.max(0, now - then.getTime());
-  const unit = (n: number, one: string, many: string): string =>
-    n === 1 ? one : `${n} ${many}`;
+  const unit = (n: number, one: string, many: string): string => (n === 1 ? one : `${n} ${many}`);
   if (ms < MIN) return 'just now';
   if (ms < HOUR) return `${unit(Math.floor(ms / MIN), '1 minute', 'minutes')} ago`;
   if (ms < DAY) return `${unit(Math.floor(ms / HOUR), 'an hour', 'hours')} ago`;
@@ -88,7 +87,8 @@ function sortHref(route: Route, sort: string): string | null {
 
 /** Which sorts a computed URL is offered for: `best` exists only on the home feed. */
 const computedOk = (route: Route, sort: string): boolean => {
-  if (route.kind === 'popular') return sort === 'hot' || sort === 'new' || sort === 'top' || sort === 'rising';
+  if (route.kind === 'popular')
+    return sort === 'hot' || sort === 'new' || sort === 'top' || sort === 'rising';
   if (sort === 'best') return route.kind === 'front';
   return true;
 };
@@ -112,4 +112,36 @@ export function sortTabs(route: Route, native: readonly NativeSort[]): SortTab[]
     if (href) tabs.push({ key, label: key, href, active: key === current });
   }
   return tabs;
+}
+
+/** The feeds that can sit as tabs before the sort tabs (old look option); home is always first. */
+export type FeedKey = 'home' | 'popular' | 'all' | 'news';
+const FEEDS: ReadonlyArray<{ key: FeedKey; href: string }> = [
+  { key: 'home', href: '/' },
+  { key: 'popular', href: '/r/popular/' },
+  { key: 'all', href: '/r/all/' },
+  { key: 'news', href: '/news/' },
+];
+
+/** Which of the feed tabs this page is, or null when it is none of them. */
+export function feedOf(route: Route): FeedKey | null {
+  if (route.kind === 'front') return 'home';
+  if (route.kind === 'popular') return 'popular';
+  if (route.kind === 'all') return 'all';
+  return /^\/news\/?$/i.test(route.path) ? 'news' : null;
+}
+
+/**
+ * The feed tabs for this page: none unless the user turned at least one on and the page is one of
+ * the feeds; then home plus the chosen feeds, the current one marked.
+ */
+export function feedTabs(route: Route, shown: ReadonlySet<FeedKey>): SortTab[] {
+  const here = feedOf(route);
+  if (!here || !shown.size) return [];
+  return FEEDS.filter((f) => f.key === 'home' || shown.has(f.key)).map((f) => ({
+    key: f.key,
+    label: f.key,
+    href: f.href,
+    active: f.key === here,
+  }));
 }

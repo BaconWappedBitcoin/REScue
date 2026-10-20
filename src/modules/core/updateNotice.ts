@@ -50,6 +50,10 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
     since: '0.1.0',
     text: 'Feed pausing now remembers your choice, marks “Page 2” and tells you when the feed ends.',
   },
+  {
+    since: '0.1.1',
+    text: 'The Old Reddit look can show home, popular, all and news tabs (settings › Old Reddit look), and voting on a comment no longer moves the page.',
+  },
 ];
 
 /** The new-feature tips an update from `from` to `to` brings. */

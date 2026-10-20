@@ -91,11 +91,7 @@ export default defineContentScript({
      * nested reply's buttons are never taken for the parent's. A control that is not there yet is
      * given about a second to hydrate after the item is scrolled into view (lazy hydration).
      */
-    const locate = async (
-      el: Element,
-      control: NativeControl,
-      scrollFirst: boolean,
-    ): Promise<Element | null> => {
+    const locate = async (el: Element, control: NativeControl): Promise<Element | null> => {
       const comment = isComment(el);
       const sel =
         comment && control === 'reply' ? C.commentActions.replyButton : controlSelector[control];
@@ -104,9 +100,10 @@ export default defineContentScript({
         const root = comment ? ownRow(el) : el;
         return root ? deepQuery(root, sel) : null;
       };
-      if (scrollFirst) el.scrollIntoView({ block: 'nearest' });
+      // Scroll only when the control is not built yet (Reddit builds some lazily, once on screen):
+      // scrolling a comment that is already there made the page jump on every vote.
       let target = find();
-      if (!target && !scrollFirst) el.scrollIntoView({ block: 'nearest' });
+      if (!target) el.scrollIntoView({ block: 'nearest' });
       for (let i = 0; i < 10 && !target; i++) {
         await sleep(100);
         target = find();
@@ -297,8 +294,8 @@ export default defineContentScript({
             return isComment(el) ? editComment(el) : { ok: false, error: 'unsupported' };
           }
           if (!controlSelector[req.control]) return { ok: false, error: 'unsupported' };
-          // Lazily hydrated controls need a position, so the item is scrolled into view first.
-          const target = await locate(el, req.control, true);
+          // A lazily built control is scrolled into view first; one that is there is not.
+          const target = await locate(el, req.control);
           if (!target) return { ok: false, error: 'not-found' };
           (target as HTMLElement).click();
           return { ok: true };
@@ -308,7 +305,7 @@ export default defineContentScript({
           // action only after Reddit's own UI shows it (R10). Never clicks.
           if (!controlSelector[req.control]) return { ok: false, error: 'unsupported' };
           // Same lazy-hydration allowance as native.click: the control may not exist yet.
-          const target = await locate(el, req.control, false);
+          const target = await locate(el, req.control);
           if (!target) return { ok: false, error: 'not-found' };
           const v = target.getAttribute(C.native.voteState);
           return {

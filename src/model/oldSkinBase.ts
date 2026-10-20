@@ -45,7 +45,8 @@ export function skinApplies(route: Route): boolean {
     case 'thread':
       return true;
     default:
-      return false;
+      // Reddit's News feed is a listing like the others (a feed tab can lead there).
+      return /^\/news\/?$/i.test(route.path);
   }
 }
 

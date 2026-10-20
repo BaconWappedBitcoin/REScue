@@ -38,6 +38,7 @@ export function chromeCss(): string {
     `${R} .rescue-otab { padding: 1px 7px 0; border: 1px solid var(--os-head-line); border-bottom: 0; background: var(--os-head); color: var(--os-tag); text-decoration: none; margin-bottom: -1px; }`,
     `${R} .rescue-otab:hover { text-decoration: underline; }`,
     `${R} .rescue-otab.rescue-oon { background: var(--os-bg); color: #ff4500; border-bottom: 1px solid var(--os-bg); }`,
+    `${R} .rescue-otabgap { width: 14px; }`,
     // The thread's comment sort line ("sorted by: top ⌄"): Reddit's own dropdown, small and grey.
     `${R} ${k.commentHeader} { font: 12px/1.4 var(--os-font); color: var(--os-meta); margin-top: 4px; }`,
     `${R} ${k.commentSort} { --size-button-sm-h: 20px; --color-button-secondary-background: transparent; --color-button-secondary-background-hover: transparent; --color-button-secondary-border: transparent; --color-button-secondary-text: var(--os-meta); }`,

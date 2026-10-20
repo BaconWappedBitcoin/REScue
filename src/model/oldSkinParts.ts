@@ -55,6 +55,7 @@ export function partsCss(): string {
     // A comment: the points text in its head, the old "[–]" mark, the flat link row under the body.
     `${R} .rescue-ocv { position: absolute; left: 0; top: 2px; width: 22px; z-index: 1; }`,
     `${R} .rescue-ocv .rescue-onum { display: none; }`,
+    `${R} .rescue-ocv { gap: 6px; }`,
     `${R} .rescue-opts { color: var(--os-meta); font: 10px/1.4 var(--os-font); margin-left: 6px; white-space: nowrap; }`,
     `${R} .rescue-ocl { margin: 1px 0 6px; padding-left: 0; }`,
     `${meta}::before { content: "[–]"; order: -1; margin-right: 4px; color: var(--os-meta); font: 10px/1.4 var(--os-font); cursor: pointer; }`,

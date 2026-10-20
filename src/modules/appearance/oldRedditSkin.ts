@@ -21,6 +21,16 @@ import type { Route } from '../../core/types';
 import { removeStyle, setStyle } from './injectedStyle';
 import { writeSkinMirror } from './oldSkin/early';
 import { SkinMount } from './oldSkin/mount';
+import { setFeedTabs } from './oldSkin/sort';
+import type { FeedKey } from '../../model/oldSkinText';
+
+const FEED_OPTIONS: ReadonlyArray<[string, FeedKey]> = [
+  ['tabPopular', 'popular'],
+  ['tabAll', 'all'],
+  ['tabNews', 'news'],
+];
+const applyFeedTabs = (options: Record<string, unknown>): void =>
+  setFeedTabs(new Set(FEED_OPTIONS.filter(([o]) => options[o] === true).map(([, k]) => k)));
 import type { Ctx } from './oldSkin/shared';
 
 export const SKIN_STYLE_ID = 'rescue-old-skin';
@@ -85,6 +95,25 @@ export const oldRedditSkin = defineModule({
       description:
         'Removes Reddit’s navigation column on wide screens so the posts use the width (the header, search and REScue’s shortcut bar stay).',
     },
+    tabPopular: {
+      type: 'boolean',
+      default: false,
+      title: 'A “popular” tab',
+      description:
+        'Adds home and popular tabs before the sort tabs on the front page, r/popular, r/all and News, so you can switch feeds there.',
+    },
+    tabAll: {
+      type: 'boolean',
+      default: false,
+      title: 'An “all” tab',
+      description: 'Adds an r/all tab next to home in the same place.',
+    },
+    tabNews: {
+      type: 'boolean',
+      default: false,
+      title: 'A “news” tab',
+      description: 'Adds a tab for Reddit’s News feed next to home in the same place.',
+    },
     hideBanner: {
       type: 'boolean',
       default: true,
@@ -95,6 +124,7 @@ export const oldRedditSkin = defineModule({
 
   init(ctx) {
     writeSkinMirror(ctx.options as OldSkinOptions);
+    applyFeedTabs(ctx.options);
     setStyle(SKIN_STYLE_ID, oldSkinCss(ctx.options as OldSkinOptions));
     applySkinAttribute(ctx.route);
     syncMount(ctx as unknown as Ctx, ctx.route);
@@ -111,6 +141,7 @@ export const oldRedditSkin = defineModule({
 
   onSettings(ctx) {
     writeSkinMirror(ctx.options as OldSkinOptions);
+    applyFeedTabs(ctx.options);
     setStyle(SKIN_STYLE_ID, oldSkinCss(ctx.options as OldSkinOptions));
     applySkinAttribute(ctx.route);
     syncMount(ctx as unknown as Ctx, ctx.route);

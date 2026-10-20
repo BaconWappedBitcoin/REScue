@@ -7,10 +7,25 @@
 import { C } from '../../../contracts/reddit';
 import { h } from '../../../core/dom';
 import type { Route } from '../../../core/types';
-import { sortTabs, type NativeSort } from '../../../model/oldSkinText';
+import {
+  feedTabs,
+  sortTabs,
+  type FeedKey,
+  type NativeSort,
+  type SortTab,
+} from '../../../model/oldSkinText';
 import { setAttr } from './shared';
 
 export const TABS_ATTR = C.skin.tabsAttr;
+
+/** The feed tabs the user turned on (options tabPopular, tabAll, tabNews). */
+let shownFeeds: ReadonlySet<FeedKey> = new Set();
+export function setFeedTabs(shown: ReadonlySet<FeedKey>): void {
+  shownFeeds = shown;
+}
+
+const tabLink = (t: SortTab, extra = ''): HTMLElement =>
+  h('a', { href: t.href, class: `rescue-otab${extra}${t.active ? ' rescue-oon' : ''}` }, t.label);
 
 /** Whether the skin shows sort tabs on this kind of page. */
 export const tabsApply = (route: Route): boolean =>
@@ -40,30 +55,34 @@ export class SortTabs {
     const dropdown = tabsApply(route)
       ? doc.querySelector<HTMLElement>(`${C.main} ${C.skin.feedSort}`)
       : null;
-    if (!dropdown) {
+    const feeds = feedTabs(route, shownFeeds);
+    // A feed page without Reddit's sort dropdown (news) still gets its feed tabs, at the top.
+    const anchor =
+      dropdown ?? (feeds.length ? doc.querySelector<HTMLElement>(C.main)?.firstElementChild : null);
+    if (!anchor) {
       this.clear(doc);
       return;
     }
-    const tabs = sortTabs(route, readNativeSorts(dropdown));
-    if (!tabs.length) {
+    const tabs = dropdown ? sortTabs(route, readNativeSorts(dropdown)) : [];
+    if (!tabs.length && !feeds.length) {
       this.clear(doc);
       return;
     }
-    const sig = JSON.stringify(tabs);
+    const sig = JSON.stringify([feeds, tabs]);
     if (!this.nav || this.signature !== sig) {
       const next = h(
         'nav',
         { class: 'rescue-otabs', 'aria-label': 'sort' },
-        ...tabs.map((t) =>
-          h('a', { href: t.href, class: t.active ? 'rescue-otab rescue-oon' : 'rescue-otab' }, t.label),
-        ),
+        ...feeds.map((t) => tabLink(t, ' rescue-ofeed')),
+        ...(feeds.length && tabs.length ? [h('span', { class: 'rescue-otabgap' })] : []),
+        ...tabs.map((t) => tabLink(t)),
       );
       this.nav?.remove();
       this.nav = next;
       this.signature = sig;
     }
-    if (this.nav.nextElementSibling !== dropdown) dropdown.before(this.nav);
-    setAttr(dropdown, TABS_ATTR, '1');
+    if (this.nav.nextElementSibling !== anchor) anchor.before(this.nav);
+    if (dropdown) setAttr(dropdown, TABS_ATTR, '1');
   }
 
   /** Remove the tabs and give Reddit's own dropdown back. */
