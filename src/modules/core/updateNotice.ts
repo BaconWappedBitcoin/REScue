@@ -66,6 +66,10 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
     since: '0.1.4',
     text: 'In the Old Reddit look, a link to one comment opens at the top with the post in view, as on old Reddit (settings › Old Reddit look › Open comment links at the top).',
   },
+  {
+    since: '0.1.6',
+    text: 'With “Links open in a new tab” on, post titles and thumbnails in the Old Reddit look open in a new tab too (its option “Post titles and thumbnails too”).',
+  },
 ];
 
 /** The new-feature tips an update from `from` to `to` brings. */

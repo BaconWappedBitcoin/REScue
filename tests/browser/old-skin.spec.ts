@@ -233,6 +233,28 @@ test('titles open an outside link directly, but Reddit-hosted media opens the po
   await expect(title('t3_image1')).toHaveAttribute('href', '/r/aww/comments/image1/dog/');
 });
 
+test('with “Links open in a new tab”, a post title opens in a new tab and the feed stays', async () => {
+  const sw = ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent('serviceworker'));
+  await sw.evaluate(
+    async (v) => (globalThis as unknown as Area).chrome.storage.local.set({ settings: v }),
+    { modules: { oldRedditSkin: { enabled: true, options: {} }, linksNewTab: { enabled: true } } },
+  );
+  const page = await ctx.newPage();
+  await page.goto(LISTING);
+  await waitForRescue(page);
+  const title = page.locator('shreddit-post#t3_image1 .rescue-otitle');
+  await expect(title).toHaveAttribute('href', '/r/aww/comments/image1/dog/');
+  const url = page.url();
+  const [tab, req] = await Promise.all([
+    ctx.waitForEvent('page'),
+    ctx.waitForEvent('request', (r) => r.url().includes('/r/aww/comments/image1/dog/')),
+    title.click(),
+  ]);
+  expect(req.frame().page()).toBe(tab);
+  expect(page.url()).toBe(url);
+  await tab.close();
+});
+
 test('on the post’s own page, clicks inside its media stay with the media (gallery arrows)', async () => {
   const page = await open(THREAD, {});
   await expect(post(page)).toHaveAttribute('data-rescue-ov', '1');
