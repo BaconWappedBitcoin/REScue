@@ -39,6 +39,9 @@ export function chromeCss(): string {
     `${R} .rescue-otab:hover { text-decoration: underline; }`,
     `${R} .rescue-otab.rescue-oon { background: var(--os-bg); color: #ff4500; border-bottom: 1px solid var(--os-bg); }`,
     `${R} .rescue-otabgap { width: 14px; }`,
+    `${R} .rescue-otab.rescue-ooff { opacity: 0.45; cursor: default; text-decoration: none; }`,
+    // The audience-lean chip sits right after the "(domain)" it describes.
+    `${R} .rescue-oline .rescue-lean-chip { margin-left: 5px; font-size: 10px; vertical-align: 2px; }`,
     // The thread's comment sort line ("sorted by: top ⌄"): Reddit's own dropdown, small and grey.
     `${R} ${k.commentHeader} { font: 12px/1.4 var(--os-font); color: var(--os-meta); margin-top: 4px; }`,
     `${R} ${k.commentSort} { --size-button-sm-h: 20px; --color-button-secondary-background: transparent; --color-button-secondary-background-hover: transparent; --color-button-secondary-border: transparent; --color-button-secondary-text: var(--os-meta); }`,

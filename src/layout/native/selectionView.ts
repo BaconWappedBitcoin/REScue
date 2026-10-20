@@ -2,8 +2,10 @@
  * The selection outline. REScue never styles Reddit's own elements for this: a REScue-owned,
  * pointer-events:none box is drawn over the selected item's OWN area. A comment element wraps all
  * of its replies, so its box runs only from the top of its own meta row to the bottom of its own
- * body; a post's box covers the feed card. The box follows scroll, resize and layout changes
- * (rAF-throttled) and hides itself when the item is removed or hidden.
+ * body; a post's box covers the feed card. The box is placed in page coordinates, so the page's own
+ * scrolling carries it with the item (a fixed box repositioned per frame lagged on fast scrolls); it
+ * follows resize, layout changes and inner scrollers (rAF-throttled) and hides itself when the item
+ * is removed or hidden.
  */
 import { C } from '../../contracts/reddit';
 import { ensureTheme } from '../../core/theme';
@@ -201,6 +203,10 @@ export class SelectionView {
   private frame = 0;
   private resizes: ResizeObserver | null = null;
   private readonly onMove = (): void => this.schedule();
+  /** The page's own scroll moves the box natively; only an inner scroller needs a repaint. */
+  private readonly onScroll = (e: Event): void => {
+    if (e.target !== document && e.target !== document.documentElement) this.schedule();
+  };
   private config: SelectionConfig = { ...DEFAULT_CONFIG };
   private ownScrollAt = -Infinity;
 
@@ -224,7 +230,7 @@ export class SelectionView {
   /** Outline `item`, scrolling it into view first when `scroll` is set and it is off-screen. */
   show(item: SelectableItem, scroll: boolean, nonLinear = false): void {
     if (!this.target) {
-      addEventListener('scroll', this.onMove, { capture: true, passive: true });
+      addEventListener('scroll', this.onScroll, { capture: true, passive: true });
       addEventListener('resize', this.onMove, { passive: true });
     }
     const fromTop = this.target && this.target !== item ? areaOf(this.target)?.top : undefined;
@@ -241,7 +247,7 @@ export class SelectionView {
 
   hide(): void {
     if (this.target) {
-      removeEventListener('scroll', this.onMove, true);
+      removeEventListener('scroll', this.onScroll, true);
       removeEventListener('resize', this.onMove);
     }
     this.target = null;
@@ -272,8 +278,8 @@ export class SelectionView {
     }
     const s = box.style;
     s.display = 'block';
-    s.left = `${area.left}px`;
-    s.top = `${area.top}px`;
+    s.left = `${area.left + scrollX}px`;
+    s.top = `${area.top + scrollY}px`;
     s.width = `${area.right - area.left}px`;
     s.height = `${area.bottom - area.top}px`;
   }
@@ -286,13 +292,14 @@ export class SelectionView {
       box.className = 'rescue-overlay';
       box.setAttribute('aria-hidden', 'true');
       box.style.cssText =
-        'position:fixed;display:none;pointer-events:none;z-index:2147483000;box-sizing:border-box;' +
+        'position:absolute;display:none;pointer-events:none;z-index:2147483000;box-sizing:border-box;' +
         'border-radius:3px;box-shadow:0 0 0 1px var(--rescue-bg,#fff)';
     }
     this.box = box;
     ensureTheme();
     this.styleOutline(box);
-    document.body.appendChild(box);
+    // In <html>, not <body>: its containing block is the document origin even if Reddit positions <body>.
+    document.documentElement.appendChild(box);
     return box;
   }
 

@@ -26,7 +26,6 @@ import type { FeedKey } from '../../model/oldSkinText';
 
 const FEED_OPTIONS: ReadonlyArray<[string, FeedKey]> = [
   ['tabPopular', 'popular'],
-  ['tabAll', 'all'],
   ['tabNews', 'news'],
 ];
 const applyFeedTabs = (options: Record<string, unknown>): void =>
@@ -100,13 +99,7 @@ export const oldRedditSkin = defineModule({
       default: false,
       title: 'A “popular” tab',
       description:
-        'Adds home and popular tabs before the sort tabs on the front page, r/popular, r/all and News, so you can switch feeds there.',
-    },
-    tabAll: {
-      type: 'boolean',
-      default: false,
-      title: 'An “all” tab',
-      description: 'Adds an r/all tab next to home in the same place.',
+        'Adds home and popular tabs before the sort tabs on the front page, r/popular and News, so you can switch feeds there.',
     },
     tabNews: {
       type: 'boolean',
@@ -119,6 +112,13 @@ export const oldRedditSkin = defineModule({
       default: true,
       title: 'Hide the subreddit banner',
       description: 'Drops the large banner picture and icon at the top of a subreddit.',
+    },
+    darkBlack: {
+      type: 'boolean',
+      default: true,
+      title: 'Black background in dark mode',
+      description:
+        'When Reddit is dark, the old look uses a pure black background (good on OLED screens). Off: the dark grey.',
     },
   },
 

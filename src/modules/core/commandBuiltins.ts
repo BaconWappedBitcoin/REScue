@@ -201,11 +201,6 @@ export function registerBuiltinCommands(): void {
     run: () => go('https://mod.reddit.com/mail/all', 'Go to moderator mail'),
   });
   registerCommand({
-    name: 'all',
-    description: 'all - go to r/all',
-    run: () => go('/r/all/', 'Go to r/all'),
-  });
-  registerCommand({
     name: 'popular',
     description: 'popular - go to r/popular',
     run: () => go('/r/popular/', 'Go to r/popular'),

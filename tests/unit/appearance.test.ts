@@ -231,7 +231,7 @@ describe('subredditManager', () => {
     subredditManager.onSettings!(
       changed(subredditManager, ctx, { showDefaults: true, subreddits: [] }) as never,
     );
-    expect(items().map((i) => i[0])).toEqual(['Home', 'all', 'popular']);
+    expect(items().map((i) => i[0])).toEqual(['Home', 'popular']);
     subredditManager.onSettings!(
       changed(subredditManager, ctx, { showDefaults: false, subreddits: [] }) as never,
     );
@@ -292,7 +292,7 @@ describe('logoLink', () => {
       customDestination,
     });
     expect(logoTarget(o('frontpage'), route(), 'me')).toBeNull();
-    expect(logoTarget(o('all'), route(), 'me')).toBe('/r/all/');
+    expect(logoTarget(o('all'), route(), 'me')).toBeNull(); // r/all is gone: front page
     expect(logoTarget(o('popular'), route(), null)).toBe('/r/popular/');
     expect(logoTarget(o('subreddit'), route({ subreddit: 'pics' }), null)).toBe('/r/pics/');
     expect(logoTarget(o('subreddit'), route(), null)).toBeNull();
@@ -309,17 +309,19 @@ describe('logoLink', () => {
   it('rewrites the logo href, keeps it rewritten, and puts the original back', async () => {
     mount('<reddit-header-large><a id="reddit-logo" href="/">Reddit</a></reddit-header-large>');
     const logo = document.querySelector('a')!;
-    const m = await bootModules([logoLink], { options: { logoLink: { destination: 'all' } } });
-    expect(logo.getAttribute('href')).toBe('/r/all/');
+    const m = await bootModules([logoLink], { options: { logoLink: { destination: 'popular' } } });
+    expect(logo.getAttribute('href')).toBe('/r/popular/');
     logo.setAttribute('href', '/'); // Reddit re-rendered the link
     await new Promise((r) => setTimeout(r, 50));
-    expect(logo.getAttribute('href')).toBe('/r/all/');
-    const ctx = m.ctxs.get('logoLink')!;
-    logoLink.onSettings!(changed(logoLink, ctx, { destination: 'popular' }) as never);
     expect(logo.getAttribute('href')).toBe('/r/popular/');
+    const ctx = m.ctxs.get('logoLink')!;
+    logoLink.onSettings!(
+      changed(logoLink, ctx, { destination: 'custom', customDestination: '/r/pics/' }) as never,
+    );
+    expect(logo.getAttribute('href')).toBe('/r/pics/');
     logoLink.onSettings!(changed(logoLink, ctx, { destination: 'frontpage' }) as never);
     expect(logo.getAttribute('href')).toBe('/');
-    logoLink.onSettings!(changed(logoLink, ctx, { destination: 'all' }) as never);
+    logoLink.onSettings!(changed(logoLink, ctx, { destination: 'popular' }) as never);
     m.dispose();
     expect(logo.getAttribute('href')).toBe('/');
   });

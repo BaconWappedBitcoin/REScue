@@ -150,7 +150,7 @@ function refreshLabel(entry: Seen): void {
   if (!entry.el) {
     entry.el = h('span', { class: 'rescue-lean-chip rescue-label' });
     entry.el.style.cssText = 'border:1px solid rgba(127,127,127,.5)';
-    ctx.ui.decorate(entry.post, 'tagline', entry.el);
+    ctx.ui.decorate(entry.post, 'domain', entry.el);
   }
   const { background, color } = chipStyle(lean.score);
   const text = chipText(lean, !!ctx.options.showLeanScore);

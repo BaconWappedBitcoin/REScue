@@ -24,13 +24,16 @@ describe('command line', () => {
     ['r/programming', '/r/programming/'],
     ['/r/AskReddit/', '/r/AskReddit/'],
     ['u/spez', '/user/spez/'],
-    ['all', '/r/all/'],
     ['front', '/'],
     ['top', '/r/rust/top/'],
     ['hot', '/r/rust/'],
     ['search async traits', '/r/rust/search/?q=async%20traits'],
   ])('%s → %s', (input, target) => {
     expect(parseCommand(input, ctx())).toMatchObject({ kind: 'go', target });
+  });
+
+  it('has no r/all command (Reddit now redirects r/all home)', () => {
+    expect(parseCommand('all', ctx())).not.toMatchObject({ kind: 'go', target: '/r/all/' });
   });
 
   it('searches site-wide from r/all', () => {

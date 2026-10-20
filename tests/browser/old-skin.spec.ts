@@ -241,7 +241,7 @@ test('dark: follows Reddit’s dark mode with the dark classic palette', async (
   await expect(page.locator('html')).toHaveAttribute('data-rescue-theme', 'dark');
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
-    .toBe('rgb(26, 26, 27)');
+    .toBe('rgb(0, 0, 0)');
 });
 
 test('the vote column votes through Reddit’s own buttons and shows what they show', async () => {

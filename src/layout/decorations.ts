@@ -4,7 +4,8 @@
  */
 import { stamp } from '../core/instance';
 
-export type Slot = 'author' | 'title' | 'tagline';
+/** `domain`: right after a link post's "(domain)" where a layout shows one (the old look), else as `tagline`. */
+export type Slot = 'author' | 'title' | 'tagline' | 'domain';
 
 /**
  * What kind of control a node is: its first `rescue-*` class. A second decoration of the same

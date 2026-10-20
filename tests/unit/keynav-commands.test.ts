@@ -48,7 +48,7 @@ describe('keyboard command table', () => {
     expect(byId.moveToParent).toEqual(['p']);
     expect(byId.toggleHelp).toEqual(['?']);
     expect(byId.frontPage).toEqual(['g f']);
-    expect(byId.slashAll).toEqual(['g a', 'g alt+a']);
+    expect(byId.slashAll).toBeUndefined();
     expect(byId.slashPopular).toEqual(['g p']);
     expect(byId.inbox).toEqual(['g i']);
     expect(byId.profile).toEqual(['g u']);

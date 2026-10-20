@@ -22,7 +22,9 @@ const FRONT_KEY = 'rescue:frontSort';
 
 /** The front page's path for a sort: "/" for Reddit's own best, else "/hot/" and so on. */
 export function frontPath(sort: unknown): string {
-  return typeof sort === 'string' && sort !== 'best' && (FRONT_SORTS as readonly string[]).includes(sort)
+  return typeof sort === 'string' &&
+    sort !== 'best' &&
+    (FRONT_SORTS as readonly string[]).includes(sort)
     ? `/${sort}/`
     : '/';
 }
@@ -65,11 +67,12 @@ export function safeLocalPath(raw: unknown): string | null {
   return SAFE_PATH.test(t) ? t : null;
 }
 
-/** The new logo target, or null to leave Reddit's own link alone. */
+/**
+ * The new logo target, or null to leave Reddit's own link alone. A saved "all" (r/all, which Reddit
+ * now redirects to the home feed) is treated as the front page.
+ */
 export function logoTarget(o: LogoOptions, route: Route, username: string | null): string | null {
   switch (o.destination) {
-    case 'all':
-      return '/r/all/';
     case 'popular':
       return '/r/popular/';
     case 'subreddit':
@@ -126,7 +129,7 @@ export const logoLink = defineModule({
   category: 'appearance',
   title: 'Logo link',
   description:
-    'Choose where Reddit’s logo takes you, and how the front page is sorted: the front page (Reddit’s own behaviour), r/all, r/popular, the subreddit you are in, your profile, or a path of your own. It changes the logo’s link in the page header, which REScue has not yet confirmed on the live page; if Reddit keeps the logo out of reach, nothing changes.',
+    'Choose where Reddit’s logo takes you, and how the front page is sorted: the front page (Reddit’s own behaviour), r/popular, the subreddit you are in, your profile, or a path of your own. It changes the logo’s link in the page header, which REScue has not yet confirmed on the live page; if Reddit keeps the logo out of reach, nothing changes.',
   enabledByDefault: true,
   options: {
     destination: {
@@ -135,7 +138,6 @@ export const logoLink = defineModule({
       title: 'The logo goes to',
       values: [
         { value: 'frontpage', label: 'Front page (Reddit’s default)' },
-        { value: 'all', label: 'r/all' },
         { value: 'popular', label: 'r/popular' },
         { value: 'subreddit', label: 'The subreddit I am in' },
         { value: 'profile', label: 'My profile' },

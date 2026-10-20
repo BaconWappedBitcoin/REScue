@@ -11,14 +11,12 @@ describe('old look feed tabs', () => {
     expect(tabs('https://www.reddit.com/', [])).toEqual([]);
   });
   it('lists home and the chosen feeds, marking the current one', () => {
-    expect(tabs('https://www.reddit.com/', ['popular', 'all', 'news'])).toEqual([
+    expect(tabs('https://www.reddit.com/', ['popular', 'news'])).toEqual([
       '[home]',
       'popular',
-      'all',
       'news',
     ]);
     expect(tabs('https://www.reddit.com/r/popular/', ['popular'])).toEqual(['home', '[popular]']);
-    expect(tabs('https://www.reddit.com/r/all/top/', ['all'])).toEqual(['home', '[all]']);
     expect(tabs('https://www.reddit.com/news/', ['news'])).toEqual(['home', '[news]']);
   });
   it('stays off subreddits and threads', () => {

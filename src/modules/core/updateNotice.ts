@@ -52,7 +52,11 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
   },
   {
     since: '0.1.1',
-    text: 'The Old Reddit look can show home, popular, all and news tabs (settings › Old Reddit look), and voting on a comment no longer moves the page.',
+    text: 'The Old Reddit look can show home, popular and news tabs (settings › Old Reddit look), and voting on a comment no longer moves the page.',
+  },
+  {
+    since: '0.1.2',
+    text: 'The Old Reddit look’s dark mode is now pure black (an option turns the grey back), audience-lean chips sit right after the domain, and the selected post’s outline keeps up with fast scrolling. Reddit now sends r/all to the home feed, so REScue’s r/all links are gone.',
   },
 ];
 

@@ -248,7 +248,6 @@ test('the optional static links are shown, with Saved from the signed-in name', 
   const statics = bar(page).locator('.rescue-sc-viewport > a');
   await expect(statics).toHaveText([
     'Home',
-    'all',
     'popular',
     'Random',
     'Friends',
@@ -256,9 +255,9 @@ test('the optional static links are shown, with Saved from the signed-in name', 
     'Modqueue',
     'Saved',
   ]);
-  await expect(statics.nth(3)).toHaveAttribute('href', '/r/random/');
-  await expect(statics.nth(6)).toHaveAttribute('href', '/r/mod/about/modqueue/');
-  await expect(statics.nth(7)).toHaveAttribute('href', `/user/${ME}/saved/`);
+  await expect(statics.nth(2)).toHaveAttribute('href', '/r/random/');
+  await expect(statics.nth(5)).toHaveAttribute('href', '/r/mod/about/modqueue/');
+  await expect(statics.nth(6)).toHaveAttribute('href', `/user/${ME}/saved/`);
 });
 
 test('scroll arrows appear when the bar overflows and scroll it', async () => {

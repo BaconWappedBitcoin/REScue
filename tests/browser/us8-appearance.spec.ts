@@ -233,15 +233,15 @@ test('back to top scrolls the page to the top from the REScue menu', async () =>
 });
 
 test('the logo link points where you chose, follows the setting, and is restored when off', async () => {
-  await configure({ logoLink: { destination: 'all' } });
+  await configure({ logoLink: { destination: 'custom', customDestination: '/r/pics/' } });
   const page = await ctx.newPage();
   await page.goto(THREAD);
   const logo = page.locator('#reddit-logo');
-  await expect(logo).toHaveAttribute('href', '/r/all/');
+  await expect(logo).toHaveAttribute('href', '/r/pics/');
 
   // Reddit re-renders the link: it is set again.
   await logo.evaluate((a) => a.setAttribute('href', '/'));
-  await expect(logo).toHaveAttribute('href', '/r/all/');
+  await expect(logo).toHaveAttribute('href', '/r/pics/');
 
   await openModule(page, 'logoLink');
   await consoleRoot(page).locator('[data-option="logoLink.destination"]').selectOption('popular');

@@ -195,10 +195,10 @@ describe('command table additions', () => {
         '/user/me_the_reader/',
       ]);
     });
-    it('g alt+a is /r/all, beside REScue’s g a', () => {
+    it('g a and g alt+a go nowhere (Reddit now redirects r/all home)', () => {
       go({ key: 'g' }, { key: 'a', code: 'KeyA', altKey: true });
       go({ key: 'g' }, { key: 'a' });
-      expect(assigned).toEqual(['/r/all/', '/r/all/']);
+      expect(assigned).toEqual([]);
     });
   });
 

@@ -13,7 +13,7 @@ const GROUP = /^(?:r\/)?([A-Za-z0-9_]{2,21}(?:\+[A-Za-z0-9_]{2,21})+)$/i;
 const PATH = /^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_.-]+)*$/;
 
 export const FORMAT_HELP =
-  'Use a subreddit name (askscience), r/name, several joined with + (a+b), u/name/m/feed, or a path such as r/all/top.';
+  'Use a subreddit name (askscience), r/name, several joined with + (a+b), u/name/m/feed, or a path such as r/pics/top.';
 
 /**
  * The same-origin path a shortcut points to, or null if it is not a usable shortcut. A single bare
@@ -205,15 +205,14 @@ export interface StaticLinkOptions {
   linkDashboard?: boolean;
 }
 
-/** The fixed links in front of your own: Home, r/all and r/popular, then the optional ones. */
+/** The fixed links in front of your own: Home and r/popular, then the optional ones (no r/all: Reddit now redirects it home). */
 export function staticLinks(
   o: StaticLinkOptions,
   session: { signedIn: boolean; username: string | null },
 ): Array<{ text: string; href: string }> {
   const out: Array<{ text: string; href: string }> = [];
   if (o.showDefaults) {
-    out.push({ text: 'Home', href: '/' }, { text: 'all', href: '/r/all/' });
-    out.push({ text: 'popular', href: '/r/popular/' });
+    out.push({ text: 'Home', href: '/' }, { text: 'popular', href: '/r/popular/' });
   }
   if (o.linkDashboard) out.push({ text: 'Dashboard', href: '#rescue:dashboard' });
   if (o.linkRandom) out.push({ text: 'Random', href: '/r/random/' });

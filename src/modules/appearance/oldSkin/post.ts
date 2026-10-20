@@ -84,7 +84,7 @@ export class PostView {
     this.title = h('a', { class: 'rescue-otitle', [ANCHOR_ATTR]: 'title' });
     this.flair = h('span', { class: 'rescue-oflair', hidden: true });
     this.nsfw = h('span', { class: 'rescue-onsfw', hidden: true }, 'NSFW');
-    this.domain = h('span', { class: 'rescue-odomain' });
+    this.domain = h('span', { class: 'rescue-odomain', [ANCHOR_ATTR]: 'domain' });
     this.when = h('span', { class: 'rescue-owhen' });
     this.byWord = h('span', { class: 'rescue-oword' }, 'by');
     this.author = h('a', { class: 'rescue-oauthor', [ANCHOR_ATTR]: 'author' });

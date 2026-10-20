@@ -283,7 +283,7 @@ describe('selection outline area', () => {
     sel.select('t3_text1'); // repaint with the stubbed rect
     const box = document.getElementById(BOX_ID)!;
     expect(box.className).toContain('rescue-overlay');
-    expect(box.style.top).toBe('50px');
+    expect(box.style.top).toBe(`${50 + scrollY}px`); // page coordinates
     expect(box.style.height).toBe('200px');
     expect(box.style.display).toBe('block');
   });

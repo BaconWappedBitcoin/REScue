@@ -23,8 +23,10 @@ export {
   type ThumbnailSize,
 } from './oldSkinBase';
 
-function paletteCss(): string {
+function paletteCss(o: OldSkinOptions): string {
   const k = C.skin;
+  const black = o.darkBlack !== false;
+  const [bg, panel] = black ? ['#000', '#0e0e0f'] : ['#1a1a1b', '#212122'];
   return `
 ${ROOT} {
   --os-bg: #fff; --os-panel: #f6f9fc; --os-fg: #222; --os-link: #0000ff; --os-visited: #551a8b;
@@ -34,9 +36,9 @@ ${ROOT} {
   --os-font: verdana, arial, helvetica, sans-serif;
 }
 ${DARK} {
-  --os-bg: #1a1a1b; --os-panel: #212122; --os-fg: #d7dadc; --os-link: #8cb3d9; --os-visited: #b49cc9;
+  --os-bg: ${bg}; --os-panel: ${panel}; --os-fg: #d7dadc; --os-link: #8cb3d9; --os-visited: #b49cc9;
   --os-meta: #8e9194; --os-tag: #7fa8d0; --os-rank: #5a5d60; --os-border: #343536; --os-sticky: #6fbf6f;
-  --os-head: #1f2a36; --os-head-line: #3a5877; --os-arrow: #5a5d60; --os-line: #343536; --os-bar: #1a1a1b;
+  --os-head: #1f2a36; --os-head-line: #3a5877; --os-arrow: #5a5d60; --os-line: #343536; --os-bar: ${bg};
 }
 ${[ROOT, `${ROOT} ${k.pageBody}`, ...k.paletteHosts.split(', ').map((h) => `${ROOT} ${h}`)].join(',\n')} {
   --color-neutral-background: var(--os-bg) !important; --color-neutral-background-strong: var(--os-bg) !important;
@@ -109,7 +111,7 @@ ${items.map((i) => `${ROOT} ${i}[${m}]`).join(', ')} { visibility: visible; }`;
 
 /** The whole stylesheet for the chosen options. Every rule is scoped by the attribute on <html>. */
 export function oldSkinCss(o: OldSkinOptions): string {
-  return [veilCss(), paletteCss(), frameCss(o), feedCss(o), searchCss(o), threadCss(), partsCss(), chromeCss(), rescueCss()]
+  return [veilCss(), paletteCss(o), frameCss(o), feedCss(o), searchCss(o), threadCss(), partsCss(), chromeCss(), rescueCss()]
     .join('\n')
     .replace(/\n{2,}/g, '\n')
     .trim();

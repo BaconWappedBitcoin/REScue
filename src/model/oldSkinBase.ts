@@ -19,6 +19,8 @@ export interface OldSkinOptions {
   rankNumbers: boolean;
   hideLeftNav: boolean;
   hideBanner: boolean;
+  /** Dark mode on pure black (OLED) instead of dark grey; on unless set to false. */
+  darkBlack?: boolean;
 }
 
 export const THUMB_PX: Record<ThumbnailSize, number> = {

@@ -55,7 +55,7 @@ export interface SortTab {
   active: boolean;
 }
 
-const SORT_ORDER = ['best', 'hot', 'new', 'rising', 'controversial', 'top'] as const;
+export const SORT_ORDER = ['best', 'hot', 'new', 'rising', 'controversial', 'top'] as const;
 const SORT_NAMES: ReadonlySet<string> = new Set(SORT_ORDER);
 
 /** What Reddit's own sort dropdown lists: a sort and where it goes. */
@@ -114,12 +114,11 @@ export function sortTabs(route: Route, native: readonly NativeSort[]): SortTab[]
   return tabs;
 }
 
-/** The feeds that can sit as tabs before the sort tabs (old look option); home is always first. */
-export type FeedKey = 'home' | 'popular' | 'all' | 'news';
+/** The feeds that can sit as tabs before the sort tabs (old look option); home is always first. There is no r/all tab: Reddit now redirects r/all to the home feed. */
+export type FeedKey = 'home' | 'popular' | 'news';
 const FEEDS: ReadonlyArray<{ key: FeedKey; href: string }> = [
   { key: 'home', href: '/' },
   { key: 'popular', href: '/r/popular/' },
-  { key: 'all', href: '/r/all/' },
   { key: 'news', href: '/news/' },
 ];
 
@@ -127,7 +126,6 @@ const FEEDS: ReadonlyArray<{ key: FeedKey; href: string }> = [
 export function feedOf(route: Route): FeedKey | null {
   if (route.kind === 'front') return 'home';
   if (route.kind === 'popular') return 'popular';
-  if (route.kind === 'all') return 'all';
   return /^\/news\/?$/i.test(route.path) ? 'news' : null;
 }
 

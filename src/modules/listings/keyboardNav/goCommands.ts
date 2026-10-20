@@ -1,7 +1,6 @@
 /**
- * Go mode (RES keyboardNav goMode): `g` then a key jumps to a page. Keys are RES's, with REScue's
- * plain `g a` kept beside RES's `g alt+a` for /r/all (research: REScue's own binding wins where
- * the two differ). Ported in spirit from RES lib/modules/keyboardNav.js (GPL-3.0, commit 4defffc).
+ * Go mode (RES keyboardNav goMode): `g` then a key jumps to a page. Keys are RES's, without RES's
+ * /r/all keys (Reddit now redirects r/all to the home feed). Ported in spirit from RES lib/modules/keyboardNav.js (GPL-3.0, commit 4defffc).
  */
 import type { Command } from '../../../core/keys';
 import { navHelpers, type NavEnv } from './env';
@@ -36,7 +35,6 @@ export function goCommands(env: NavEnv): Command[] {
       const sub = env.route().subreddit;
       return sub ? `/r/${encodeURIComponent(sub)}/` : null;
     }),
-    page('slashAll', '/r/all', ['g a', 'g alt+a'], () => '/r/all/'),
     page('slashPopular', '/r/popular', ['g p'], () => '/r/popular/'),
     page('randomSubreddit', 'A random subreddit', ['g alt+y'], () => '/r/random/'),
     page('inbox', 'Inbox', ['g i'], () => '/message/inbox/'),

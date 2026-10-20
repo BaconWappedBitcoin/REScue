@@ -196,7 +196,7 @@ export const subredditManager = defineModule({
     showDefaults: {
       type: 'boolean',
       default: true,
-      title: 'Start with Home, r/all and r/popular',
+      title: 'Start with Home and r/popular',
     },
     linkRandom: { type: 'boolean', default: false, title: 'Show a Random link (r/random)' },
     linkFriends: {

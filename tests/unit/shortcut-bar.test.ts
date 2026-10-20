@@ -90,9 +90,9 @@ describe('shortcut model', () => {
       linkSaved: true,
     };
     const out = staticLinks(on, { signedIn: false, username: null });
-    expect(out.map((l) => l.href)).toEqual(['/', '/r/all/', '/r/popular/', '/r/random/']);
+    expect(out.map((l) => l.href)).toEqual(['/', '/r/popular/', '/r/random/']);
     const me = staticLinks(on, { signedIn: true, username: 'some user' });
-    expect(me.map((l) => l.href).slice(4)).toEqual([
+    expect(me.map((l) => l.href).slice(3)).toEqual([
       '/r/friends/',
       '/r/mod/',
       '/r/mod/about/modqueue/',
@@ -365,7 +365,6 @@ describe('shortcut bar: reorder, sort, groups and the rest', () => {
     const hrefs = qa('.rescue-sc-viewport > a').map((a) => a.getAttribute('href'));
     expect(hrefs).toEqual([
       '/',
-      '/r/all/',
       '/r/popular/',
       '/r/random/',
       '/r/friends/',

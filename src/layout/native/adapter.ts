@@ -14,7 +14,7 @@ import type { Decorations, Slot } from '../decorations';
 const HIDDEN_ATTR = 'data-rescue-hidden';
 const COLLAPSED_ATTR = 'data-rescue-collapsed';
 const SLOT_ATTR = C.slotAttr;
-const PLACEMENT_ORDER: Slot[] = ['author', 'tagline', 'title'];
+const PLACEMENT_ORDER: Slot[] = ['author', 'tagline', 'domain', 'title'];
 const ITEM_SELECTOR = [C.post, C.search.post, C.comment, C.profileComment].join(',');
 
 type ItemKind = 'post' | 'comment' | 'profileComment';
@@ -29,7 +29,7 @@ interface Tracked {
 
 const bySlot = (name: string): string => `[${SLOT_ATTR}="${name}"]`;
 const ANCHOR_ATTR = C.skin.anchorAttr;
-type SkinAnchor = 'author' | 'title' | 'end';
+type SkinAnchor = 'author' | 'title' | 'end' | 'domain';
 
 export class NativeAdapter {
   private readonly items = new Map<string, Tracked>();
@@ -245,10 +245,17 @@ export class NativeAdapter {
     let titleAfter: Element | null = null;
     const search = kind === 'post' && isSearchPost(host);
     const skinEnd = kind === 'post' ? this.skinAnchor(host, 'end') : null;
-    let timeAfter: Element | null = kind === 'post' ? (skinEnd ?? this.postTime(host, search)) : null;
+    let timeAfter: Element | null =
+      kind === 'post' ? (skinEnd ?? this.postTime(host, search)) : null;
+    let domainAfter = kind === 'post' ? this.skinAnchor(host, 'domain') : null;
     for (const slot of PLACEMENT_ORDER) {
       for (const node of this.deco.slot(id, slot)) {
         this.placed.add(node);
+        if (slot === 'domain' && domainAfter) {
+          this.placeAfter(node, domainAfter);
+          if (node instanceof Element) domainAfter = node;
+          continue;
+        }
         if (search) {
           // A search result has no shadow slots to fall back on: no anchor, no placement.
           if (slot === 'title') titleAfter = this.placeAfterSearchTitle(node, host, titleAfter);

@@ -9,6 +9,7 @@ import { h } from '../../../core/dom';
 import type { Route } from '../../../core/types';
 import {
   feedTabs,
+  SORT_ORDER,
   sortTabs,
   type FeedKey,
   type NativeSort,
@@ -18,7 +19,7 @@ import { setAttr } from './shared';
 
 export const TABS_ATTR = C.skin.tabsAttr;
 
-/** The feed tabs the user turned on (options tabPopular, tabAll, tabNews). */
+/** The feed tabs the user turned on (options tabPopular, tabNews). */
 let shownFeeds: ReadonlySet<FeedKey> = new Set();
 export function setFeedTabs(shown: ReadonlySet<FeedKey>): void {
   shownFeeds = shown;
@@ -68,14 +69,25 @@ export class SortTabs {
       this.clear(doc);
       return;
     }
-    const sig = JSON.stringify([feeds, tabs]);
+    // Reddit's News feed has no sorts: the sort words stay in place, greyed, so the row keeps its shape.
+    const unsorted = !dropdown && feeds.length ? SORT_ORDER : [];
+    const sig = JSON.stringify([feeds, tabs, unsorted]);
     if (!this.nav || this.signature !== sig) {
       const next = h(
         'nav',
         { class: 'rescue-otabs', 'aria-label': 'sort' },
         ...feeds.map((t) => tabLink(t, ' rescue-ofeed')),
-        ...(feeds.length && tabs.length ? [h('span', { class: 'rescue-otabgap' })] : []),
+        ...(feeds.length && (tabs.length || unsorted.length)
+          ? [h('span', { class: 'rescue-otabgap' })]
+          : []),
         ...tabs.map((t) => tabLink(t)),
+        ...unsorted.map((k) =>
+          h(
+            'span',
+            { class: 'rescue-otab rescue-ooff', title: 'Reddit’s News feed has no sorts' },
+            k,
+          ),
+        ),
       );
       this.nav?.remove();
       this.nav = next;
