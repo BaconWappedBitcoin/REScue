@@ -15,10 +15,12 @@ const HOST_ID = 'rescue-notices';
 const MODULE_ID = /^[A-Za-z0-9_-]+$/;
 const STYLE = `
 :host { all: initial; position: fixed; right: 12px; bottom: calc(var(--rescue-stack-h, 40px) + var(--rescue-nav-h, 0px) + 20px); z-index: 2147483646;
-  display: flex; flex-direction: column; gap: 8px; color-scheme: var(--rescue-scheme, light); max-width: 360px; font: 13px/1.4 system-ui, sans-serif; }
+  display: flex; flex-direction: column; gap: 8px; color-scheme: var(--rescue-scheme, light); max-width: 360px; font: 13px/1.4 system-ui, sans-serif;
+  pointer-events: none; }
 .n { background: var(--rescue-bg, #fff); color: var(--rescue-fg, #1a1a1b); border: 1px solid var(--rescue-border, #ccc);
   border-left: 4px solid var(--rescue-accent, #336699);
-  border-radius: 4px; padding: 8px 46px 8px 10px; box-shadow: 0 2px 8px var(--rescue-shadow, rgba(0,0,0,.2)); position: relative; }
+  border-radius: 4px; padding: 8px 46px 8px 10px; box-shadow: 0 2px 8px var(--rescue-shadow, rgba(0,0,0,.2)); position: relative;
+  pointer-events: auto; }
 .n.warning { border-left-color: var(--rescue-warn, #c90); } .n.error { border-left-color: var(--rescue-danger, #c33); }
 .head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-weight: 600; }
 .head a { color: var(--rescue-meta, #666); text-decoration: none; }

@@ -14,7 +14,7 @@
  * hidden by the stylesheet only while `data-rescue-ov` is set; the bridge keeps pressing its buttons.
  */
 import { h } from '../../../core/dom';
-import { commentScoreOf, ownActionRow } from '../../../model/commentRow';
+import { commentScoreOf, ownActionRow, ownMoreRepliesControl } from '../../../model/commentRow';
 import { parseComment } from '../../../model/comment';
 import { agoText, pointsText } from '../../../model/oldSkinText';
 import type { ActionResult } from '../../../core/actions';
@@ -37,6 +37,15 @@ export class CommentView {
   private inboxSet: boolean | null = null;
   private saved = false;
   private id: string;
+  private readonly details: HTMLDetailsElement | null;
+  /**
+   * Opening a collapsed comment ([+]) whose replies Reddit has not loaded yet shows only its own
+   * "N more replies" button, so a second click was needed; press that button for the reader.
+   */
+  private readonly onToggle = (): void => {
+    if (!this.details?.open || this.host.querySelector(C.comment)) return;
+    ownMoreRepliesControl(this.host)?.click();
+  };
 
   static mount(host: Element, ctx: Ctx): CommentView | null {
     const c = parseComment(host, null);
@@ -83,6 +92,8 @@ export class CommentView {
       this.item('report', () => ctx.actions.report(target)),
       this.item('reply', () => ctx.actions.startReply(target)),
     );
+    this.details = host.querySelector<HTMLDetailsElement>(':scope > details');
+    this.details?.addEventListener('toggle', this.onToggle);
     host.append(this.vote.el);
     this.place();
     this.render();
@@ -202,6 +213,7 @@ export class CommentView {
   }
 
   dispose(): void {
+    this.details?.removeEventListener('toggle', this.onToggle);
     this.vote.dispose();
     this.pts.remove();
     this.links.remove();

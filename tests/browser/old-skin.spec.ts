@@ -225,6 +225,33 @@ test('on: a feed row is the old row: rank, vote column, title line, tagline, fla
   await expect(page.locator('#rescue-gear')).toBeVisible();
 });
 
+test('titles open an outside link directly, but Reddit-hosted media opens the post', async () => {
+  const page = await open(LISTING, {});
+  const title = (id: string) => page.locator(`shreddit-post#${id} .rescue-otitle`);
+  await expect(title('t3_link1')).toHaveAttribute('href', 'https://example.co.uk/nasa');
+  // i.redd.it sends a browser visit to reddit.com/media, which can loop.
+  await expect(title('t3_image1')).toHaveAttribute('href', '/r/aww/comments/image1/dog/');
+});
+
+test('on the post’s own page, clicks inside its media stay with the media (gallery arrows)', async () => {
+  const page = await open(THREAD, {});
+  await expect(post(page)).toHaveAttribute('data-rescue-ov', '1');
+  await post(page).evaluate((p) => {
+    const media = document.createElement('div');
+    media.setAttribute('slot', 'post-media-container');
+    const next = document.createElement('button');
+    next.id = 'fx-next';
+    next.textContent = 'next';
+    next.addEventListener('click', () => next.setAttribute('data-clicked', ''));
+    media.appendChild(next);
+    p.appendChild(media);
+  });
+  const url = page.url();
+  await page.locator('#fx-next').dispatchEvent('click');
+  await expect(page.locator('#fx-next')).toHaveAttribute('data-clicked', '');
+  expect(page.url()).toBe(url);
+});
+
 test('the tagline keeps REScue’s tag / ignore buttons right after the author', async () => {
   const page = await open(LISTING, {});
   const tag = post(page).locator('.rescue-otag');
@@ -340,6 +367,33 @@ test('on a thread: the post and every comment get the vote column and flat links
   const own = first.locator('shreddit-comment-action-row').first().locator('xpath=..'); // Reddit's row box
   const box = await own.boundingBox();
   expect(!box || box.width <= 1 || box.height <= 1).toBe(true);
+});
+
+test('opening a collapsed comment whose replies are not loaded presses Reddit’s “N more replies”', async () => {
+  const page = await open(THREAD, {});
+  const id = await page.evaluate(() => {
+    const leaf = [...document.querySelectorAll('shreddit-comment[data-rescue-ov]')].find(
+      (c) => c.querySelector(':scope > details') && !c.querySelector('shreddit-comment'),
+    )!;
+    const details = leaf.querySelector(':scope > details') as HTMLDetailsElement;
+    const more = document.createElement('button');
+    more.textContent = '2 more replies';
+    more.addEventListener('click', () => more.setAttribute('data-clicked', ''));
+    details.appendChild(more);
+    details.open = false;
+    return leaf.getAttribute('thingid');
+  });
+  const more = page.locator(`shreddit-comment[thingid="${id}"] button`, {
+    hasText: '2 more replies',
+  });
+  await page.waitForTimeout(100);
+  await expect(more).not.toHaveAttribute('data-clicked', ''); // collapsing never loads
+  await page.evaluate((i) => {
+    (
+      document.querySelector(`shreddit-comment[thingid="${i}"] > details`) as HTMLDetailsElement
+    ).open = true;
+  }, id);
+  await expect(more).toHaveAttribute('data-clicked', '');
 });
 
 test('comment votes, save, report and reply go through Reddit’s own comment controls', async () => {

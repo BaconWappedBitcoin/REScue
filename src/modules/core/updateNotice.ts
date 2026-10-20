@@ -58,6 +58,10 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
     since: '0.1.2',
     text: 'The Old Reddit look’s dark mode is now pure black (an option turns the grey back), audience-lean chips sit right after the domain, and the selected post’s outline keeps up with fast scrolling. Reddit now sends r/all to the home feed, so REScue’s r/all links are gone.',
   },
+  {
+    since: '0.1.3',
+    text: 'In the Old Reddit look, [+] on a collapsed comment now loads its replies in one click, gallery arrows work on a post’s page, and Reddit-hosted images open the post instead of a broken image link.',
+  },
 ];
 
 /** The new-feature tips an update from `from` to `to` brings. */

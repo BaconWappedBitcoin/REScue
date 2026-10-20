@@ -36,6 +36,10 @@ import {
 } from './shared';
 import { nativeVote, VoteBox } from './vote';
 
+/** Media Reddit hosts itself (its own image, video and gallery pages). */
+const REDDIT_HOSTED =
+  /^https?:\/\/(?:[a-z0-9-]+\.)*(?:redd\.it|reddit\.com|redditmedia\.com)(?:[/?#]|$)/i;
+
 /** Listings that mix subreddits show "to r/sub"; a subreddit's own feed and a thread do not. */
 export const showsSub = (route: Route): boolean =>
   route.kind !== 'subreddit' && route.kind !== 'thread';
@@ -172,6 +176,9 @@ export class PostView {
   }
 
   private openFromThumb(e: MouseEvent): void {
+    // Only a feed draws the media as a thumbnail; on the post's own page it is the full media, and
+    // its own controls (a gallery's arrows) must keep their clicks.
+    if (!this.host.closest(C.feed)) return;
     const t = e.target instanceof Element ? e.target : null;
     if (!t || (t !== this.thumb && t.closest(C.mediaContainer)?.parentElement !== this.host))
       return;
@@ -217,7 +224,12 @@ export class PostView {
     if (!p) return;
     this.post = p;
     const isSelf = p.type === 'text' || /^self\./.test(p.domain);
-    const external = (p.type === 'link' || p.type === 'image') && p.url ? p.url : null;
+    // Reddit-hosted media (i.redd.it, v.redd.it, a gallery) opens the post: i.redd.it now sends a
+    // browser visit to reddit.com/media, which can loop (LibreWolf: "isn't redirecting properly").
+    const external =
+      (p.type === 'link' || p.type === 'image') && p.url && !REDDIT_HOSTED.test(p.url)
+        ? p.url
+        : null;
     setText(this.title, p.title);
     setAttr(this.title, 'href', external ?? p.permalink);
     setAttr(this.title, 'rel', external ? 'noopener noreferrer' : null);
