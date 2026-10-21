@@ -38,6 +38,9 @@ export function feedCss(o: OldSkinOptions): string {
   background: transparent !important; border-radius: 0 !important; margin: 0 0 8px !important; padding: 0 !important;
   font-family: var(--os-font); font-size: 10px; color: var(--os-meta);
 }`,
+    // A post Reddit hid (its own Hide: it sets [hidden]) goes away and takes no rank, as on old Reddit;
+    // the grid above would otherwise keep it on screen as an empty numbered box.
+    `${P}[hidden] { display: none !important; counter-increment: none; }`,
     `${P}::before { content: ${rank}; grid-area: 1 / 1; color: var(--os-rank); font: normal 15px arial, sans-serif; text-align: right; padding: 16px ${o.rankNumbers ? 8 : 0}px 0 0; }`,
     // Fills every cell of the first row, so auto-placed items (the sealed ones) fall below it.
     `${P}::after { content: ""; grid-area: 1 / 1 / 2 / -1; pointer-events: none; }`,

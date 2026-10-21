@@ -17,11 +17,14 @@ export function partsCss(): string {
   return [
     // The vote column: arrows grey until hovered or voted, the score between them.
     `${R} .rescue-ovote { display: flex; flex-direction: column; align-items: center; gap: 1px; padding-top: 4px; font-family: arial, sans-serif; box-sizing: border-box; }`,
-    `${R} .rescue-oarrow { all: unset; box-sizing: border-box; width: 15px; height: 14px; background: var(--os-arrow); cursor: pointer; }`,
-    `${R} .rescue-oup { clip-path: ${UP}; }`,
-    `${R} .rescue-odown { clip-path: ${DOWN}; }`,
-    `${R} .rescue-oup:hover, ${R} .rescue-oup[aria-pressed="true"] { background: var(--os-up); }`,
-    `${R} .rescue-odown:hover, ${R} .rescue-odown[aria-pressed="true"] { background: var(--os-down); }`,
+    // The button is a roomy invisible box and the arrow is drawn inside it: a clip-path on the
+    // button itself would also clip where it can be clicked, down to the 15x14 triangle.
+    `${R} .rescue-oarrow { all: unset; box-sizing: border-box; width: 30px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; }`,
+    `${R} .rescue-oarrow::before { content: ""; width: 15px; height: 14px; background: var(--os-arrow); }`,
+    `${R} .rescue-oup::before { clip-path: ${UP}; }`,
+    `${R} .rescue-odown::before { clip-path: ${DOWN}; }`,
+    `${R} .rescue-oup:hover::before, ${R} .rescue-oup[aria-pressed="true"]::before { background: var(--os-up); }`,
+    `${R} .rescue-odown:hover::before, ${R} .rescue-odown[aria-pressed="true"]::before { background: var(--os-down); }`,
     `${R} .rescue-oarrow:focus-visible { outline: 2px solid var(--os-link); }`,
     `${R} .rescue-ovote[aria-busy="true"] .rescue-oarrow { opacity: .5; cursor: progress; }`,
     `${R} .rescue-onum { font: bold 13px/1.2 var(--os-font); color: var(--os-meta); min-height: 15px; text-align: center; }`,
@@ -55,7 +58,8 @@ export function partsCss(): string {
     // A comment: the points text in its head, the old "[–]" mark, the flat link row under the body.
     `${R} .rescue-ocv { position: absolute; left: 0; top: 2px; width: 22px; z-index: 1; }`,
     `${R} .rescue-ocv .rescue-onum { display: none; }`,
-    `${R} .rescue-ocv { gap: 6px; }`,
+    `${R} .rescue-ocv { gap: 0; }`,
+    `${R} .rescue-ocv .rescue-oarrow { width: 22px; }`,
     `${R} .rescue-opts { color: var(--os-meta); font: 10px/1.4 var(--os-font); margin-left: 6px; white-space: nowrap; }`,
     `${R} .rescue-ocl { margin: 1px 0 6px; padding-left: 0; }`,
     `${meta}::before { content: "[–]"; order: -1; margin-right: 4px; color: var(--os-meta); font: 10px/1.4 var(--os-font); cursor: pointer; }`,

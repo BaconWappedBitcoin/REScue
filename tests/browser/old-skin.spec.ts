@@ -225,6 +225,16 @@ test('on: a feed row is the old row: rank, vote column, title line, tagline, fla
   await expect(page.locator('#rescue-gear')).toBeVisible();
 });
 
+test('a post Reddit hides (its own Hide sets [hidden]) leaves no empty numbered box', async () => {
+  const page = await open(LISTING, {});
+  const first = post(page, 0);
+  await expect(first).toHaveAttribute('data-rescue-ov', '1');
+  await first.evaluate((p) => p.setAttribute('hidden', ''));
+  await expect(first).toBeHidden();
+  const box = await first.evaluate((p) => p.getBoundingClientRect().height);
+  expect(box).toBe(0);
+});
+
 test('titles open an outside link directly, but Reddit-hosted media opens the post', async () => {
   const page = await open(LISTING, {});
   const title = (id: string) => page.locator(`shreddit-post#${id} .rescue-otitle`);
@@ -291,6 +301,19 @@ test('dark: follows Reddit’s dark mode with the dark classic palette', async (
   await expect
     .poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor))
     .toBe('rgb(0, 0, 0)');
+});
+
+test('a click just beside an arrow’s triangle still votes (roomy click area)', async () => {
+  const page = await open(LISTING, {});
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const p = post(page);
+  const up = p.locator('.rescue-oup');
+  const box = (await up.boundingBox())!;
+  expect(box.width).toBeGreaterThanOrEqual(28);
+  expect(box.height).toBeGreaterThanOrEqual(20);
+  // The top-left corner of the box is outside the drawn triangle.
+  await up.click({ position: { x: 2, y: 2 } });
+  await expect.poll(() => clicks(page)).toContain(`${POSTS[0]!.id}:vote-up-on`);
 });
 
 test('the vote column votes through Reddit’s own buttons and shows what they show', async () => {

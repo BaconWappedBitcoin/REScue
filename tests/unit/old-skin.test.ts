@@ -128,7 +128,7 @@ describe('the stylesheet', () => {
     const css = oldSkinCss(DEFAULTS);
     expect(css).toContain(`${ROOT}[data-rescue-theme="dark"]`);
     expect(css).toContain('--os-arrow: #5a5d60');
-    expect(css).toContain('.rescue-oup[aria-pressed="true"] { background: var(--os-up)');
+    expect(css).toContain('.rescue-oup[aria-pressed="true"]::before { background: var(--os-up)');
   });
 });
 

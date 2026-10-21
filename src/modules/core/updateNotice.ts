@@ -70,6 +70,10 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
     since: '0.1.6',
     text: 'With “Links open in a new tab” on, post titles and thumbnails in the Old Reddit look open in a new tab too (its option “Post titles and thumbnails too”).',
   },
+  {
+    since: '0.1.7',
+    text: 'In the Old Reddit look, the vote arrows are easier to hit (a click just beside one counts), and a post you hide no longer leaves an empty numbered box.',
+  },
 ];
 
 /** The new-feature tips an update from `from` to `to` brings. */
