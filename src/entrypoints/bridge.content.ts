@@ -121,6 +121,19 @@ export default defineContentScript({
     };
 
     /** Open a comment's overflow menu and press its "Edit" item, found by its text. */
+    /**
+     * Press a menu row. A post-menu row is li[role=presentation] around the real div[role=menuitem];
+     * only the inner one acts (verified live 2026-10-16). A comment-menu row is li[role=menuitem]
+     * around a clickable div that holds the handler (verified live 2026-10-19 and, for "Edit
+     * comment", 2026-10-21: clicking the li did nothing); clicking that div still bubbles to the li.
+     */
+    const clickRow = (row: Element): void =>
+      (
+        (row.querySelector('[role="menuitem"]') ??
+          row.querySelector(':scope > div') ??
+          row) as HTMLElement
+      ).click();
+
     const editComment = async (host: Element): Promise<BridgeResponse> => {
       // The row (and its menu) hydrate lazily: bring the comment into view and give it a second.
       let menu: Element | null | undefined = ownRow(host)?.querySelector(
@@ -144,7 +157,7 @@ export default defineContentScript({
           C.commentActions.editItemText.test(n.textContent ?? ''),
         );
         if (item) {
-          (item as HTMLElement).click();
+          clickRow(item);
           return { ok: true };
         }
       }
@@ -215,15 +228,7 @@ export default defineContentScript({
         if (!wasOpen) trigger.click(); // read only: close the menu again
         return { ok: true, itemState: state, itemText: text };
       }
-      // A post-menu row is li[role=presentation] around the real div[role=menuitem]; only the inner
-      // one acts (verified live 2026-10-16), so click it when present. A comment-menu row is
-      // li[role=menuitem] around a clickable div that holds the handler (verified live 2026-10-19:
-      // clicking the li did nothing); clicking that div still bubbles to the li.
-      (
-        (row.querySelector('[role="menuitem"]') ??
-          row.querySelector(':scope > div') ??
-          row) as HTMLElement
-      ).click();
+      clickRow(row);
       return { ok: true, itemState: state, itemText: text };
     };
 

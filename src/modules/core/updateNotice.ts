@@ -74,6 +74,10 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
     since: '0.1.7',
     text: 'In the Old Reddit look, the vote arrows are easier to hit (a click just beside one counts), and a post you hide no longer leaves an empty numbered box.',
   },
+  {
+    since: '0.1.8',
+    text: 'Editing your own comment from the Old Reddit look (“edit” under it) works again.',
+  },
 ];
 
 /** The new-feature tips an update from `from` to `to` brings. */

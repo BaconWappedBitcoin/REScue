@@ -63,8 +63,9 @@ function hydrate(c) {
   if (own) { menu.setAttribute('editable-comment', ''); menu.setAttribute('is-comment-author', ''); }
   const mroot = menu.attachShadow({ mode: 'open' });
   mroot.innerHTML = '<button id="overflow-trigger" aria-label="Open user actions" aria-expanded="false">...</button>'
-    + '<div class="items" hidden><div role="menuitem">Copy link</div>' + (own ? '<div role="menuitem">Edit comment</div>' : '')
-    + '<div role="menuitem">Report</div></div>';
+    // Live shape (2026-10-21): li[role=menuitem] around a div that holds the click handler.
+    + '<div class="items" hidden><li role="menuitem"><div tabindex="0">Copy link</div></li>' + (own ? '<li role="menuitem"><div tabindex="0">Edit comment</div></li>' : '')
+    + '<li role="menuitem"><div tabindex="0">Report</div></li></div>';
   const trigger = mroot.querySelector('#overflow-trigger');
   const items = mroot.querySelector('.items');
   trigger.addEventListener('click', () => {
@@ -74,7 +75,7 @@ function hydrate(c) {
     window.__clicks.push(id + ':menu-' + (open ? 'open' : 'close'));
   });
   for (const item of mroot.querySelectorAll('[role=menuitem]')) {
-    item.addEventListener('click', () => {
+    item.querySelector('div').addEventListener('click', () => {
       window.__clicks.push(id + ':item-' + item.textContent);
       items.hidden = true;
       if (/^Edit/.test(item.textContent)) openBox(c, 'edit');
