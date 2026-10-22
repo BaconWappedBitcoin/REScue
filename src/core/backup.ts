@@ -12,6 +12,7 @@ export const BACKUP_KEYS = [
   'subredditTags',
   'savedComments',
   'read',
+  'threadSubscriptions',
 ] as const;
 
 export interface BackupFile {
@@ -44,6 +45,10 @@ export function buildBackup(
   };
 }
 
+/** A plain JSON object (not null, not a list). */
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
 export type ImportResult = { ok: true; data: StoredData } | { ok: false; error: string };
 
 /** Validate and migrate a backup; returns the storage items to write. Never executes content. */
@@ -60,15 +65,31 @@ export function parseBackup(
   } catch {
     return { ok: false, error: 'Not a valid backup file (invalid JSON).' };
   }
-  if (file.format !== BACKUP_FORMAT) return { ok: false, error: 'Not a REScue backup file.' };
+  if (!isRecord(file) || file.format !== BACKUP_FORMAT)
+    return { ok: false, error: 'Not a REScue backup file.' };
   if (file.formatVersion !== BACKUP_FORMAT_VERSION)
     return { ok: false, error: `Unsupported backup format version ${String(file.formatVersion)}.` };
-  if (!file.data || typeof file.data !== 'object')
-    return { ok: false, error: 'Backup has no data.' };
-  const imported: StoredData = {
-    schema: { version: typeof file.schemaVersion === 'number' ? file.schemaVersion : 1 },
-  };
-  for (const k of BACKUP_KEYS) if (k in file.data) imported[k] = (file.data as StoredData)[k];
+  if (!isRecord(file.data)) return { ok: false, error: 'Backup has no data.' };
+  const schemaVersion = file.schemaVersion ?? 1;
+  if (!Number.isInteger(schemaVersion) || schemaVersion < 1)
+    return { ok: false, error: `Backup has an invalid schema version ${String(schemaVersion)}.` };
+  // A newer REScue wrote it: this version cannot know what its data means, so it is not written.
+  if (schemaVersion > CURRENT_SCHEMA_VERSION)
+    return {
+      ok: false,
+      error: `This backup comes from a newer version of REScue (data version ${schemaVersion}; this version reads up to ${CURRENT_SCHEMA_VERSION}). Update REScue, then import it again.`,
+    };
+  const imported: StoredData = { schema: { version: schemaVersion } };
+  for (const k of BACKUP_KEYS) {
+    if (!(k in file.data)) continue;
+    const v = file.data[k];
+    if (k === 'filters' ? !Array.isArray(v) : !isRecord(v))
+      return {
+        ok: false,
+        error: `Backup is damaged: “${k}” is not ${k === 'filters' ? 'a list' : 'a set of entries'}.`,
+      };
+    imported[k] = v;
+  }
   const migrated = runMigrations(imported, MIGRATIONS);
   if (!migrated.ok) return { ok: false, error: `Could not upgrade backup: ${migrated.error}` };
   if (mode === 'replace') return { ok: true, data: migrated.data };

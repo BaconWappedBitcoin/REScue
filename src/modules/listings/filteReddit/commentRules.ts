@@ -19,6 +19,7 @@ import { checkExpression, type Test } from './conditions';
 import { browseConditions, compileBrowse, type BrowseEnv } from './browseConditions';
 import { isLowEffort } from './lowEffort';
 import { parsePattern } from './pattern';
+import { ruleOn } from './rules';
 
 export { isDeleted };
 export type { CommentEnv, CommentFacts };
@@ -108,7 +109,7 @@ export function compileCommentRules(rows: CommentRule[]): {
   const rules: CompiledCommentRule[] = [];
   const errors: string[] = [];
   for (const r of rows) {
-    if (!r || !r.enabled) continue;
+    if (!r || !ruleOn(r)) continue;
     const pattern = String(r.pattern ?? '').trim();
     if (needsPattern(r.type) && !pattern) continue;
     const problem = validateCommentRule({ ...r, pattern });

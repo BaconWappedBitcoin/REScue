@@ -6,6 +6,7 @@
  */
 import { h } from '../../core/dom';
 import { hint } from '../../core/hints';
+import { moduleOn, saveOrNotify, setModuleEnabled } from '../../core/settings';
 import { openTabs } from '../../core/tabs';
 import { ensureTheme } from '../../core/theme';
 import { defineModule, type ModuleContext } from '../../core/types';
@@ -52,22 +53,15 @@ function perform(p: Parsed, ctx: ModuleContext, newTab: 'front' | 'back' | null)
   } else if (p.kind === 'command') {
     ctx.keys.run(p.target);
   } else if (p.kind === 'toggle') {
-    const profile = ctx.settings.profile();
     const def = ctx.settings.definitions().find((d) => d.id === p.target)!;
-    const on = profile.modules[def.id]?.enabled ?? def.enabledByDefault;
-    void ctx.settings
-      .save({
-        ...profile,
-        modules: {
-          ...profile.modules,
-          [def.id]: { ...(profile.modules[def.id] ?? {}), enabled: !on },
-        },
-      })
-      .then(() =>
+    const on = moduleOn(ctx.settings, def.id);
+    void saveOrNotify(ctx, setModuleEnabled(ctx.settings.profile(), def, !on)).then(
+      (saved) =>
+        saved &&
         ctx.notices.show(`${def.title} turned ${on ? 'off' : 'on'}. Reload to apply.`, {
           timeoutMs: 5000,
         }),
-      );
+    );
   }
   return true;
 }

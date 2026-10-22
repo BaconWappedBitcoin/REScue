@@ -111,13 +111,16 @@ export class ReadStore {
 
 let shared: ReadStore | null = null;
 let opening: Promise<ReadStore> | null = null;
+/** Bumped by closeReadStore, so a load still in flight cannot reinstate a closed store. */
+let generation = 0;
 
 /** The one store for this page, created and loaded on first use. */
 export function openReadStore(data: SharedData): Promise<ReadStore> {
   opening ??= (async () => {
+    const gen = generation;
     const store = new ReadStore(data);
     await store.load();
-    shared = store;
+    if (gen === generation) shared = store;
     return store;
   })();
   return opening;
@@ -127,6 +130,7 @@ export function openReadStore(data: SharedData): Promise<ReadStore> {
 export const sharedReadStore = (): ReadStore | null => shared;
 
 export function closeReadStore(): void {
+  generation++;
   shared = null;
   opening = null;
 }

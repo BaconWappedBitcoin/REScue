@@ -3,6 +3,8 @@
  * XMLHttpRequest everywhere else. The only allowed destination is the page's own Reddit origin
  * (hover-card partials and the read-only JSON endpoints in the contracts module, through
  * redditJson.ts), with the user's existing session. Every destination is listed in PRIVACY.md.
+ * Every request is a GET without a body (anything else is refused before it leaves), and an
+ * answer that was redirected to any other origin is thrown away unread.
  */
 const REDDIT_ORIGIN = /^https:\/\/(www\.|sh\.)?reddit\.com$/;
 
@@ -40,9 +42,20 @@ export async function netFetch(url: string, init: RequestInit = {}): Promise<Res
     console.error('[REScue] blocked request to', u.href);
     throw new BlockedRequestError(`REScue does not contact ${u.hostname}`);
   }
-  return fetch(u.href, {
+  if ((init.method ?? 'GET').toUpperCase() !== 'GET' || init.body != null) {
+    throw new BlockedRequestError('REScue only reads from Reddit (GET, no body)');
+  }
+  const res = await fetch(u.href, {
     ...init,
+    method: 'GET',
     credentials: init.credentials ?? 'include',
     redirect: 'follow',
   });
+  // A same-origin redirect (a renamed path) is fine; one that left Reddit is not read.
+  // (`url` is the address the answer finally came from; empty only for a synthetic Response.)
+  if ((res.redirected || res.url) && classify(res.url || 'about:blank').dest !== 'same-origin') {
+    console.error('[REScue] answer redirected away from Reddit, ignored:', res.url);
+    throw new BlockedRequestError('Reddit redirected the request to another site');
+  }
+  return res;
 }

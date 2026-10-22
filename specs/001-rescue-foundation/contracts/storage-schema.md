@@ -13,9 +13,12 @@
 | `read` | `Record<threadId, ReadRecord>` | LRU >50,000 or >90 days |
 | `collapsed` | `Record<commentId, 1>` | with its thread's ReadRecord |
 | `hiddenPosts` | `Record<postId, timestamp>` | >90 days |
+| `threadSubscriptions` | `Record<postId, Sub>` (threadSubscriptions); written at once, not debounced. Before 2026-10-21 it was the raw key `rescue-subs:threadSubscriptions`, which the module moves here once and deletes | each watch ends after its chosen days |
 | `mod:<moduleId>` | module-private scoped store | module-declared |
 
-All writes go through typed stores that debounce (250 ms) and batch.
+All writes go through typed stores that debounce (250 ms) and batch. A failed write keeps its
+values for the next write (newer values win) and is reported once; removing keys drops pending
+writes to them first, so a queued write cannot bring them back.
 
 ## storage.sync (optional)
 
@@ -42,7 +45,7 @@ shows a notice offering an export.
   "exportedAt": "2026-10-15T12:00:00Z",
   "app": { "name": "REScue", "version": "x.y.z" },
   "data": { "settings": {}, "userTags": {}, "filters": [], "subredditTags": {},
-            "savedComments": {}, "read": {} }
+            "savedComments": {}, "read": {}, "threadSubscriptions": {} }
 }
 ```
 

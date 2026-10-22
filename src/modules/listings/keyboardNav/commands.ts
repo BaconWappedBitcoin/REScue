@@ -20,6 +20,11 @@ import { commentsOf, linkOf, navHelpers, type NavEnv } from './env';
 import { goCommands } from './goCommands';
 import { linkCommands } from './linkCommands';
 
+/** A REScue popup or menu that is open (each closes itself on Escape). */
+const OPEN_POPUP =
+  '.rescue-overlay[role="dialog"]:not([hidden]), .rescue-overlay[role="menu"]:not([hidden]), ' +
+  '.rescue-sc-menu[role="menu"]:not([hidden]), .rescue-tag-editor, .rescue-tags-manager';
+
 export { commentsOf, linkOf, type NavEnv };
 
 export function scrollToBottom(): void {
@@ -278,11 +283,11 @@ export function buildCommands(env: NavEnv): Command[] {
       title: 'Close the list / clear the selection',
       defaultKeys: ['escape'],
       section: 'General',
-      // An open tag editor or tagged-users list closes itself on Escape; the selection clear must
-      // not swallow that key first (this dispatcher runs in the window's capture phase).
-      enabled: () =>
-        env.helpOpen() ||
-        (!!sel().current() && !document.querySelector('.rescue-tag-editor, .rescue-tags-manager')),
+      // Any open REScue popup or menu (tag editor, shortcut-bar menus, big editor, source, …)
+      // closes itself on Escape; the selection clear must not swallow that key first (this
+      // dispatcher runs in the window's capture phase). Live 2026-10-21 the first Escape only
+      // cleared the selection while the sort menu stayed open.
+      enabled: () => env.helpOpen() || (!!sel().current() && !document.querySelector(OPEN_POPUP)),
       run: () => {
         if (env.helpOpen()) env.closeHelp();
         else sel().clear();

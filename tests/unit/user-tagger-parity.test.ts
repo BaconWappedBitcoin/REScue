@@ -660,6 +660,7 @@ async function boot(
     markAuthor: (i, c) => deco.markAuthor(i, c),
     unmarkAuthor: (i, c) => deco.unmarkAuthor(i, c),
     decorate: (i, s, n) => deco.decorate(i, s, n),
+    removeDecorations: (k) => deco.removeKind(k),
     addClass: (i, c) => deco.addClass(i, c),
     setRevealHidden: (on) => deco.setReveal(on),
     addHeaderTool: () => {},

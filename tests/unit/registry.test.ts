@@ -153,3 +153,54 @@ describe('registry.settingsChanged', () => {
     expect(reg.status('live')).toBe('ok');
   });
 });
+
+describe('registry.settingsChanged follows dependsOn', () => {
+  it('switches dependents off with their dependency and back on after it, in order', async () => {
+    const enabled: Record<string, boolean> = { base: true, child: true, other: true };
+    const log: string[] = [];
+    const reg = createRegistry(deps(enabled));
+    const live = (id: string, dependsOn?: string[]) =>
+      mod(id, {
+        ...(dependsOn ? { dependsOn } : {}),
+        init: async () => {
+          await Promise.resolve();
+          log.push(`init ${id}`);
+        },
+        onSettings: () => {},
+        dispose: () => log.push(`dispose ${id}`),
+      });
+    // Registered dependent-first, so order must come from dependsOn, not registration.
+    reg.register(live('child', ['base']));
+    reg.register(live('base'));
+    reg.register(live('other'));
+    await reg.start();
+    log.length = 0;
+
+    enabled.base = false;
+    await reg.settingsChanged();
+    expect(log).toEqual(['dispose child', 'dispose base']);
+    expect(reg.status('child')).toBe('inactive');
+    expect(reg.status('other')).toBe('ok');
+    log.length = 0;
+
+    enabled.base = true;
+    await reg.settingsChanged();
+    expect(log).toEqual(['init base', 'init child']);
+    expect(reg.status('child')).toBe('ok');
+  });
+
+  it('does not bring back a dependent the reader switched off', async () => {
+    const enabled: Record<string, boolean> = { base: true, child: false };
+    const init = vi.fn();
+    const reg = createRegistry(deps(enabled));
+    reg.register(mod('base', { onSettings: () => {} }));
+    reg.register(mod('child', { dependsOn: ['base'], init, onSettings: () => {} }));
+    await reg.start();
+    enabled.base = false;
+    await reg.settingsChanged();
+    enabled.base = true;
+    await reg.settingsChanged();
+    expect(init).not.toHaveBeenCalled();
+    expect(reg.status('child')).toBe('inactive');
+  });
+});

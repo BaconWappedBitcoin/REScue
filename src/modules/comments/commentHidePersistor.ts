@@ -71,8 +71,11 @@ function onToggle(s: State, id: string, collapsed: boolean): void {
 
 /** Collapse a remembered comment that is open. Retries once when Reddit has not rendered it yet. */
 function reapply(s: State, id: string, el: Element, retry = true): void {
-  if (s.stored[id] !== 1 || isNativeCollapsed(el) !== false) {
-    if (retry && isNativeCollapsed(el) === null && s.stored[id] === 1)
+  // Nearly every comment was never collapsed: answer that before looking inside the comment.
+  if (s.stored[id] !== 1) return;
+  const collapsed = isNativeCollapsed(el);
+  if (collapsed !== false) {
+    if (retry && collapsed === null)
       setTimeout(() => state === s && reapply(s, id, el, false), 300);
     return;
   }

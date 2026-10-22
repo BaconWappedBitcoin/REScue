@@ -12,7 +12,7 @@ import { h } from '../../../core/dom';
 import { hint, label } from '../../../core/hints';
 import { placePopup } from '../../../core/popup';
 import type { Post } from '../../../model/types';
-import type { FilterRule } from './rules';
+import { ruleOn, type FilterRule } from './rules';
 
 export type MenuKind = 'subreddit' | 'user' | 'domain';
 
@@ -101,7 +101,7 @@ export function sameRule(row: Row, rule: FilterRule): boolean {
 }
 
 export const isFiltered = (rows: Row[], rule: FilterRule) =>
-  rows.some((r) => r.enabled !== false && sameRule(r, rule));
+  rows.some((r) => ruleOn(r) && sameRule(r, rule));
 
 export interface Plan {
   rows: Row[];
@@ -112,7 +112,7 @@ export interface Plan {
 const without = (rows: Row[], i: number) => rows.filter((_, j) => j !== i);
 const lastMatch = (rows: Row[], rule: FilterRule, enabled: boolean) => {
   for (let i = rows.length - 1; i >= 0; i--) {
-    if (sameRule(rows[i]!, rule) && (rows[i]!.enabled !== false) === enabled) return i;
+    if (sameRule(rows[i]!, rule) && ruleOn(rows[i]!) === enabled) return i;
   }
   return -1;
 };

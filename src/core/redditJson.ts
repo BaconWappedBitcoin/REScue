@@ -7,76 +7,31 @@
  * - Every request goes through net.ts (same origin, the reader's own session, no oauth host).
  * - Every response is shape-checked. A mismatch is a visible warning, never a silent empty list.
  * - At most one request per second per endpoint, a small cache, and one request in flight per key.
- * - A kill switch: HTTP 403 or 429, or an HTML page where JSON was expected, pauses ALL reads for
- *   ten minutes and says so.
+ * - A kill switch, and says so once per pause: HTTP 403, or an HTML page where JSON was expected,
+ *   pauses reads from THAT endpoint for ten minutes (one address Reddit stops serving must not stop
+ *   the others); HTTP 429 (rate limit) pauses ALL reads for ten minutes.
  */
 import { C } from '../contracts/reddit';
 import { BlockedRequestError, netFetch } from './net';
+import { PARSERS, type JsonData, type JsonEndpoint, type JsonParams } from './redditJsonParse';
 import type { NoticeApi } from './types';
 
-export type JsonEndpoint = keyof typeof C.json;
-
-export interface MineSub {
-  /** `display_name`, e.g. "aww" (or "u_name" for a profile). */
-  name: string;
-  /** `display_name_prefixed`, e.g. "r/aww" or "u/name". */
-  prefixed: string;
-  url: string;
-  over18: boolean;
-  subscribers: number | null;
-}
-export interface MineResult {
-  subs: MineSub[];
-  /** The `after` cursor for the next page, or null on the last page. */
-  after: string | null;
-}
-
-export interface InfoPost {
-  /** Full name, e.g. "t3_abc123". */
-  id: string;
-  title: string | null;
-  numComments: number;
-  locked: boolean;
-  saved: boolean;
-  hidden: boolean;
-  /** true = upvoted, false = downvoted, null = no vote. */
-  likes: boolean | null;
-  score: number | null;
-  /** The picture's original pixels (width, height) from `preview.images[0].source`, when it has one. */
-  sourceSize?: readonly [number, number];
-}
-export interface InfoResult {
-  posts: InfoPost[];
-}
-
-export interface CommentsResult {
-  post: InfoPost;
-  comments: Array<{
-    id: string;
-    controversiality: number;
-    gilded: number;
-    scoreHidden: boolean;
-    score: number | null;
-  }>;
-}
-
-export interface MeResult {
-  signedIn: boolean;
-  name: string | null;
-}
-export interface BlockedResult {
-  names: string[];
-}
-
-interface Endpoints {
-  mine: { params: { limit?: number; after?: string }; data: MineResult };
-  info: { params: { id: string | string[] }; data: InfoResult };
-  comments: { params: { id: string; limit?: number; depth?: number }; data: CommentsResult };
-  me: { params: Record<string, never>; data: MeResult };
-  blocked: { params: Record<string, never>; data: BlockedResult };
-}
-export type JsonParams<K extends JsonEndpoint> = Endpoints[K]['params'];
-export type JsonData<K extends JsonEndpoint> = Endpoints[K]['data'];
+export type {
+  BlockedResult,
+  CommentsResult,
+  FeedsResult,
+  InfoComment,
+  InfoPost,
+  InfoResult,
+  JsonData,
+  JsonEndpoint,
+  JsonParams,
+  MeResult,
+  MineResult,
+  MineSub,
+  MultiFeed,
+  ThreadComment,
+} from './redditJsonParse';
 
 export type JsonFailure = 'params' | 'backoff' | 'blocked' | 'network' | 'http' | 'html' | 'shape';
 export type JsonResult<K extends JsonEndpoint> =
@@ -114,130 +69,18 @@ const DEFAULT_TTL: Record<JsonEndpoint, number> = {
   comments: 60_000,
   me: 5 * 60_000,
   blocked: 5 * 60_000,
-};
-
-// --- shape checks --------------------------------------------------------------------------
-
-type Obj = Record<string, unknown>;
-const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
-const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
-const numOr = (v: unknown, d: number): number => (typeof v === 'number' && isFinite(v) ? v : d);
-const numOrNull = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
-
-/** The children of a Listing (`{kind:'Listing', data:{children:[…]}}`), or null if it is not one. */
-function listing(v: unknown): { children: unknown[]; after: string | null } | null {
-  if (!isObj(v) || !isObj(v.data) || !Array.isArray(v.data.children)) return null;
-  return { children: v.data.children, after: str(v.data.after) };
-}
-const childData = (c: unknown): Obj | null => (isObj(c) && isObj(c.data) ? c.data : null);
-
-function postFrom(d: Obj): InfoPost | null {
-  const id = str(d.name);
-  if (!id || typeof d.num_comments !== 'number') return null;
-  return {
-    id,
-    title: str(d.title),
-    numComments: d.num_comments,
-    locked: d.locked === true,
-    saved: d.saved === true,
-    hidden: d.hidden === true,
-    likes: typeof d.likes === 'boolean' ? d.likes : null,
-    score: numOrNull(d.score),
-    ...sourceSizeOf(d),
-  };
-}
-
-/** The original picture size Reddit lists for a post, as `{ sourceSize }`, or nothing. */
-function sourceSizeOf(d: Obj): { sourceSize: readonly [number, number] } | Record<string, never> {
-  const images = isObj(d.preview) ? d.preview.images : null;
-  const src = Array.isArray(images) && isObj(images[0]) ? images[0].source : null;
-  if (!isObj(src)) return {};
-  const w = numOrNull(src.width);
-  const h = numOrNull(src.height);
-  return w && h && w > 0 && h > 0 ? { sourceSize: [w, h] as const } : {};
-}
-
-const PARSERS: { [K in JsonEndpoint]: (raw: unknown) => JsonData<K> | null } = {
-  mine(raw) {
-    const l = listing(raw);
-    if (!l) return null;
-    const subs: MineSub[] = [];
-    for (const c of l.children) {
-      const d = childData(c);
-      const name = d && str(d.display_name);
-      if (!d || !name) return null;
-      subs.push({
-        name,
-        prefixed: str(d.display_name_prefixed) ?? `r/${name}`,
-        url: str(d.url) ?? `/r/${name}/`,
-        over18: d.over18 === true,
-        subscribers: numOrNull(d.subscribers),
-      });
-    }
-    return { subs, after: l.after };
-  },
-  info(raw) {
-    const l = listing(raw);
-    if (!l) return null;
-    const posts: InfoPost[] = [];
-    for (const c of l.children) {
-      const d = childData(c);
-      if (!d) return null;
-      if (isObj(c) && c.kind !== 't3') continue;
-      const p = postFrom(d);
-      if (!p) return null;
-      posts.push(p);
-    }
-    return { posts };
-  },
-  comments(raw) {
-    if (!Array.isArray(raw) || raw.length < 1) return null;
-    const first = listing(raw[0]);
-    const d = first && childData(first.children[0]);
-    const post = d && postFrom(d);
-    if (!post) return null;
-    const rest = raw[1] === undefined ? { children: [] } : listing(raw[1]);
-    if (!rest) return null;
-    const comments: CommentsResult['comments'] = [];
-    for (const c of rest.children) {
-      const cd = childData(c);
-      if (!cd) return null;
-      if (isObj(c) && c.kind !== 't1') continue;
-      const id = str(cd.name);
-      if (!id) return null;
-      comments.push({
-        id,
-        controversiality: numOr(cd.controversiality, 0),
-        gilded: numOr(cd.gilded, 0),
-        scoreHidden: cd.score_hidden === true,
-        score: numOrNull(cd.score),
-      });
-    }
-    return { post, comments };
-  },
-  me(raw) {
-    if (!isObj(raw)) return null;
-    const name = str(isObj(raw.data) ? raw.data.name : raw.name);
-    return { signedIn: !!name, name };
-  },
-  blocked(raw) {
-    const l = listing(raw);
-    if (!l) return null;
-    const names: string[] = [];
-    for (const c of l.children) {
-      const name = isObj(c) ? str(c.name) : null;
-      if (!name) return null;
-      names.push(name);
-    }
-    return { names };
-  },
+  multis: 60 * 60_000,
 };
 
 // --- request building ----------------------------------------------------------------------
 
-const POST_FULLNAME = /^t3_[a-z0-9]{1,10}$/i;
-const POST_ID = /^(?:t3_)?([a-z0-9]{1,10})$/i;
+// Reddit's ids have grown (live 2026-10-21: comment t1_19rfviy114w00, 13 characters), so allow
+// up to 16 for posts and comments alike.
+const INFO_FULLNAME = /^(?:t3_|t1_)[a-z0-9]{1,16}$/i;
+const POST_ID = /^(?:t3_)?([a-z0-9]{1,16})$/i;
+const COMMENT_ID = /^(?:t1_)?([a-z0-9]{1,16})$/i;
 const AFTER = /^t5_[a-z0-9]{1,12}$/i;
+/** The most ids one `info` call took. `info` is retired (C.json); nothing calls it. */
 export const INFO_MAX_IDS = 100;
 
 /** The path and query for a call, or null when the parameters are not acceptable. */
@@ -267,21 +110,31 @@ export function buildRequest(endpoint: JsonEndpoint, params: object): string | n
       if (!only('id')) return null;
       const ids = Array.isArray(p.id) ? p.id : typeof p.id === 'string' ? p.id.split(',') : [];
       if (!ids.length || ids.length > INFO_MAX_IDS) return null;
-      if (!ids.every((i) => typeof i === 'string' && POST_FULLNAME.test(i))) return null;
+      if (!ids.every((i) => typeof i === 'string' && INFO_FULLNAME.test(i))) return null;
       q.set('id', ids.join(','));
       return `${base}?${q}`;
     }
     case 'comments': {
-      if (!only('id', 'limit', 'depth')) return null;
+      if (!only('id', 'comment', 'limit', 'depth')) return null;
       const m = typeof p.id === 'string' ? POST_ID.exec(p.id) : null;
       if (!m) return null;
-      for (const k of ['limit', 'depth'] as const) {
+      let thread = m[1]!.toLowerCase();
+      if (p.comment !== undefined) {
+        // One comment's own thread: /comments/<post>/_/<comment>.json (the "_" stands for the slug).
+        const c = typeof p.comment === 'string' ? COMMENT_ID.exec(p.comment) : null;
+        if (!c) return null;
+        thread += `/_/${c[1]!.toLowerCase()}`;
+      }
+      for (const [k, lo] of [
+        ['limit', 1],
+        ['depth', 0],
+      ] as const) {
         if (p[k] === undefined) continue;
-        const n = int(p[k], 1, 500);
+        const n = int(p[k], lo, 500);
         if (n === null) return null;
         q.set(k, String(n));
       }
-      return `${base.replace('{id}', m[1]!.toLowerCase())}?${q}`;
+      return `${base.replace('{id}', thread)}?${q}`;
     }
     default:
       return only() ? `${base}?${q}` : null;
@@ -308,7 +161,10 @@ export class RedditJsonClient {
   private readonly nextFree = new Map<JsonEndpoint, number>();
   private readonly cache = new Map<string, { at: number; data: unknown }>();
   private readonly inflight = new Map<string, Promise<JsonResult<JsonEndpoint>>>();
+  /** Every read pauses until then (HTTP 429: Reddit's rate limit is for the whole session). */
   private backoffUntil = 0;
+  /** One endpoint's reads pause until then (HTTP 403 or a web page from that endpoint). */
+  private readonly endpointBackoff = new Map<JsonEndpoint, number>();
   private readonly shapeFailures = new Set<JsonEndpoint>();
   private readonly fetchJson: NonNullable<JsonDeps['fetchJson']>;
   private readonly now: () => number;
@@ -327,11 +183,24 @@ export class RedditJsonClient {
     this.nextFree.clear();
     this.shapeFailures.clear();
     this.backoffUntil = 0;
+    this.endpointBackoff.clear();
   }
 
-  /** When reads resume after a 403/429/HTML pause, or 0 when not paused. */
-  pausedUntil(): number {
-    return this.backoffUntil > this.now() ? this.backoffUntil : 0;
+  /**
+   * When reads resume, or 0 when not paused. Without an endpoint: the pause of every read (429).
+   * With one: the later of that and the endpoint's own pause (403 or a web page).
+   */
+  pausedUntil(endpoint?: JsonEndpoint): number {
+    const t = this.now();
+    const all = this.backoffUntil > t ? this.backoffUntil : 0;
+    const own = endpoint ? (this.endpointBackoff.get(endpoint) ?? 0) : 0;
+    return Math.max(all, own > t ? own : 0);
+  }
+
+  /** Endpoints whose reads are paused on their own (403 or a web page), not counting a 429 pause. */
+  pausedEndpoints(): JsonEndpoint[] {
+    const t = this.now();
+    return [...this.endpointBackoff].filter(([, until]) => until > t).map(([e]) => e);
   }
 
   /** Endpoints whose last answer did not have the expected shape. */
@@ -350,7 +219,7 @@ export class RedditJsonClient {
     if (!target) {
       return { ok: false, reason: 'params', message: `REScue: bad request for ${endpoint}.` };
     }
-    const until = this.pausedUntil();
+    const until = this.pausedUntil(endpoint);
     if (until) return this.paused(until);
 
     const key = `${endpoint}|${target}`;
@@ -379,12 +248,23 @@ export class RedditJsonClient {
     };
   }
 
-  private trip(opts: JsonCallOptions, why: string): void {
-    this.backoffUntil = this.now() + BACKOFF_MS;
+  /**
+   * Pause reads for ten minutes: every endpoint when `endpoint` is null (429), else that one only.
+   * The notice is shown once per pause: a request already in flight that is refused as well while
+   * the pause stands only keeps it.
+   */
+  private trip(opts: JsonCallOptions, endpoint: JsonEndpoint | null, why: string): void {
+    const t = this.now();
+    const was = endpoint ? (this.endpointBackoff.get(endpoint) ?? 0) : this.backoffUntil;
+    const until = t + BACKOFF_MS;
+    if (endpoint) this.endpointBackoff.set(endpoint, until);
+    else this.backoffUntil = until;
+    if (was > t) return;
+    const what = endpoint ? `Reddit for ${C.json[endpoint]}` : 'Reddit';
     opts.notify?.(
-      `REScue: ${why} REScue stops asking Reddit for 10 minutes (until ${clock(this.backoffUntil)}). Reddit itself is not affected.`,
+      `REScue: ${why} REScue stops asking ${what} for 10 minutes (until ${clock(until)}). Reddit itself is not affected.`,
       'warning',
-      'json-paused',
+      endpoint ? `json-paused-${endpoint}` : 'json-paused',
     );
   }
 
@@ -399,7 +279,7 @@ export class RedditJsonClient {
     const slot = Math.max(t, this.nextFree.get(endpoint) ?? 0);
     this.nextFree.set(endpoint, slot + MIN_GAP_MS);
     if (slot > t) await this.sleep(slot - t);
-    const until = this.pausedUntil();
+    const until = this.pausedUntil(endpoint);
     if (until) return this.paused(until);
 
     let res: JsonResponse;
@@ -414,7 +294,8 @@ export class RedditJsonClient {
       };
     }
     if (res.status === 403 || res.status === 429) {
-      this.trip(opts, `Reddit answered ${res.status} to a read-only request.`);
+      const scope = res.status === 429 ? null : endpoint;
+      this.trip(opts, scope, `Reddit answered ${res.status} to a read-only request.`);
       return { ok: false, reason: 'http', message: `Reddit answered ${res.status}.` };
     }
     if (!res.ok) {
@@ -428,7 +309,11 @@ export class RedditJsonClient {
     }
     const type = res.headers.get('content-type') ?? '';
     if (/html/i.test(type) || text.trimStart().startsWith('<')) {
-      this.trip(opts, 'Reddit answered with a web page instead of data (a login or block page).');
+      this.trip(
+        opts,
+        endpoint,
+        'Reddit answered with a web page instead of data (a login or block page).',
+      );
       return { ok: false, reason: 'html', message: 'Reddit answered with a web page.' };
     }
     let parsed: unknown;
@@ -466,7 +351,7 @@ export class RedditJsonClient {
   }
 }
 
-/** The client every module shares, so the rate limit and the pause apply across features. */
+/** The client every module shares, so the rate limit and the pauses apply across features. */
 export const sharedJsonClient = new RedditJsonClient();
 
 export function getJson<K extends JsonEndpoint>(
@@ -497,12 +382,17 @@ export function jsonFor(
     });
 }
 
-/** For a module's `health()`: degraded while reads are paused or an answer had a new shape. */
+/**
+ * For a module's `health()`: degraded while all reads are paused (`json.paused`), or while an
+ * endpoint is paused on its own or its last answer had a new shape (`json.<endpoint>`).
+ */
 export function jsonHealth(client: RedditJsonClient = sharedJsonClient): {
   status: 'ok' | 'degraded';
   failingContracts: string[];
 } {
-  const failing = client.brokenEndpoints().map((e) => `json.${e}`);
+  const failing = [...new Set([...client.brokenEndpoints(), ...client.pausedEndpoints()])].map(
+    (e) => `json.${e}`,
+  );
   if (client.pausedUntil()) failing.push('json.paused');
   return { status: failing.length ? 'degraded' : 'ok', failingContracts: failing };
 }

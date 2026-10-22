@@ -24,10 +24,21 @@
  *
  * reply(markdown) is not delegated yet: Reddit's composer has not been exercised with typed text on
  * a fixture page. It answers `not-found` honestly rather than guessing (Principle II).
+ *
+ * Media keys (this lane): galleryStep / toggleMute press the SELECTED POST's own gallery arrows and
+ * video mute button — Reddit's own controls, never a re-implementation of the carousel or player
+ * (verified live 2026-10-21; the bridge scopes them to that post's own carousel / player). They are
+ * not account actions, so they are pressed signed out as well, and `ok` means only that Reddit's
+ * own control was pressed and found where the contracts say it lives.
  */
 import { C } from '../contracts/reddit';
 import type { BridgeApi } from './types';
-import type { MenuItemKind, MenuKind, NativeControl } from './bridge-protocol';
+import {
+  NOT_FOCUSED,
+  type MenuItemKind,
+  type MenuKind,
+  type NativeControl,
+} from './bridge-protocol';
 import type { Session } from '../model/types';
 
 export type ActionFailure = 'signed-out' | 'not-found' | 'timeout' | 'rejected';
@@ -39,11 +50,31 @@ export type VoteState = -1 | 0 | 1 | null;
 /** Whether Reddit's own menu row reads as already saved / hidden, or null when unreadable. */
 export type MenuState = 'on' | 'off' | null;
 
+/**
+ * Why a composer op (composer.insert / insertAt) wrote nothing, in plain words for the warning the
+ * caller shows; '' when there is nothing more specific to say than "it did not take the text".
+ */
+export function composerProblem(error: string | undefined): string {
+  if (error === NOT_FOCUSED) {
+    return 'Reddit’s comment box did not take the focus, so nothing was typed (no other box was changed).';
+  }
+  if (error === 'bad-request') return 'The text is too long for REScue to put in.';
+  return '';
+}
+
 export interface ActionTarget {
   id: string;
   /** The item's host element (shreddit-post / shreddit-comment). */
   source: Element;
 }
+
+/**
+ * Fast local checks for the media keys, so a key can decline without a bridge round trip: does the
+ * post's light DOM hold a gallery carousel / a video player to act on (C.mediaControls, verified
+ * live 2026-10-21)? A post without one keeps the key's normal meaning.
+ */
+export const hasGallery = (el: Element): boolean => !!el.querySelector(C.mediaControls.gallery);
+export const hasVideo = (el: Element): boolean => !!el.querySelector(C.mediaControls.player);
 
 export interface ActionApi {
   voteState(target: ActionTarget): Promise<VoteState>;
@@ -72,6 +103,13 @@ export interface ActionApi {
   report(target: ActionTarget): Promise<ActionResult>;
   /** Press a post's own Share button (Reddit opens its own share menu). Posts only. */
   share(target: ActionTarget): Promise<ActionResult>;
+  /**
+   * Press the post's own previous (-1) / next (1) gallery arrow; Reddit's carousel does the rest.
+   * Not an account action: pressed signed out as well.
+   */
+  galleryStep(target: ActionTarget, dir: 1 | -1): Promise<ActionResult>;
+  /** Press the post's own video mute button (Reddit's player mutes or unmutes its video). */
+  toggleMute(target: ActionTarget): Promise<ActionResult>;
 }
 
 export interface ActionDeps {
@@ -118,7 +156,12 @@ export function createActionApi(deps: ActionDeps): ActionApi {
 
   const failure = (error: string | undefined): ActionResult => ({
     ok: false,
-    reason: error === 'timeout' ? 'timeout' : error === 'not-editable' ? 'rejected' : 'not-found',
+    reason:
+      error === 'timeout'
+        ? 'timeout'
+        : error === 'not-editable' || error === NOT_FOCUSED
+          ? 'rejected'
+          : 'not-found',
     detail: error,
   });
 
@@ -298,6 +341,28 @@ export function createActionApi(deps: ActionDeps): ActionApi {
       }
       const ref = deps.bridge.ref(target.source);
       const r = await deps.bridge.request({ op: 'native.click', ref, control: 'share' });
+      return r.ok ? { ok: true } : failure(r.error);
+    },
+    async galleryStep(target, dir) {
+      // Reddit's carousel answers for anyone, so this is pressed signed out as well, and it exposes
+      // no readable state to confirm against: a press is all there is, as for a share.
+      if (!hasGallery(target.source)) {
+        return { ok: false, reason: 'not-found', detail: 'this post has no gallery' };
+      }
+      const ref = deps.bridge.ref(target.source);
+      const r = await deps.bridge.request({
+        op: 'native.click',
+        ref,
+        control: dir === 1 ? 'galleryNext' : 'galleryPrev',
+      });
+      return r.ok ? { ok: true } : failure(r.error);
+    },
+    async toggleMute(target) {
+      if (!hasVideo(target.source)) {
+        return { ok: false, reason: 'not-found', detail: 'this post has no video' };
+      }
+      const ref = deps.bridge.ref(target.source);
+      const r = await deps.bridge.request({ op: 'native.click', ref, control: 'muteToggle' });
       return r.ok ? { ok: true } : failure(r.error);
     },
     startReply: (target) => compose(target, 'reply'),

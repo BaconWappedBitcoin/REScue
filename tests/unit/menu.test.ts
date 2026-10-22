@@ -170,7 +170,7 @@ describe('menu items from modules', () => {
     it.toggle!.set(true);
     expect(state.profile.modules.filteReddit?.options?.hideNsfw).toBe(true);
     expect(it.toggle!.get()).toBe(true);
-    await Promise.resolve();
+    await new Promise((r) => setTimeout(r, 0)); // the notice follows the finished save
     expect(ctx.notices.show).toHaveBeenCalledWith(
       expect.stringContaining('on'),
       expect.objectContaining({ moduleId: 'filteReddit' }),

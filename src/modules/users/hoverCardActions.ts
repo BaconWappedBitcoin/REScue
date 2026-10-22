@@ -7,9 +7,15 @@
  */
 import { h } from '../../core/dom';
 import { hint, label } from '../../core/hints';
-import { isModuleEnabled, setOption } from '../../core/settings';
+import { OWNER_ATTR } from '../../core/instance';
+import { isModuleEnabled, moduleOn, setOption } from '../../core/settings';
 import { defineModule, type ModuleContext } from '../../core/types';
-import { hoverCardContent, hoverCardUser, userHoverCards } from '../../model/chromeAnchors';
+import {
+  hoverCardContent,
+  hoverCardUser,
+  userHoverCards,
+  userHoverCardSelector,
+} from '../../model/chromeAnchors';
 import { taggerApi } from './taggerApi';
 import { tagKey } from './tagStore';
 import { userHighlight } from './userHighlight';
@@ -75,8 +81,7 @@ function addActions(ctx: ModuleContext, content: HTMLElement, user: string): voi
   const row: Row = { user, ignore: null, highlight: null };
   const box = h('div', { class: HOVER_ACTIONS_CLASS });
   // The tagger is on (dependsOn) but may still be reading its tags: it is looked up on click.
-  const tagger = ctx.settings.definitions().find((d) => d.id === 'userTagger');
-  const taggerOn = !!tagger && isModuleEnabled(tagger, ctx.settings.profile());
+  const taggerOn = moduleOn(ctx.settings, 'userTagger');
   if (taggerOn && ctx.session?.username?.toLowerCase() !== user.toLowerCase()) {
     const tag = button(label.tag, (b) => taggerApi()?.edit(user, b));
     tag.title = hint.hoverTag(user);
@@ -99,6 +104,20 @@ function addActions(ctx: ModuleContext, content: HTMLElement, user: string): voi
   if (!box.childElementCount) return;
   content.append(box);
   rows.push(row);
+}
+
+/** Did a burst add a hover card, or anything inside one (its content loading or reloading)? */
+function addsToCard(records: readonly MutationRecord[]): boolean {
+  const card = userHoverCardSelector();
+  for (const r of records) {
+    for (const n of r.addedNodes) {
+      // REScue's own nodes (this module's row included) are never Reddit loading a card.
+      if (n instanceof Element ? n.hasAttribute(OWNER_ATTR) : !n.parentElement) continue;
+      const el = n instanceof Element ? n : n.parentElement!;
+      if (el.closest(card) || (n instanceof Element && n.querySelector(card))) return true;
+    }
+  }
+  return false;
 }
 
 function scan(ctx: ModuleContext): void {
@@ -127,9 +146,10 @@ export const hoverCardActions = defineModule({
     document.getElementById(STYLE_ID)?.remove();
     (document.head ?? document.documentElement).append(style);
     let timer: ReturnType<typeof setTimeout> | null = null;
-    // The card's content is re-rendered by Reddit's partial; look again after each burst of changes.
-    const mo = new MutationObserver(() => {
-      if (timer) return;
+    // The card's content is re-rendered by Reddit's partial; look again after each burst of changes
+    // that adds a card or something inside one (not after every comment a thread loads).
+    const mo = new MutationObserver((records) => {
+      if (timer || !addsToCard(records)) return;
       timer = setTimeout(() => {
         timer = null;
         scan(ctx);

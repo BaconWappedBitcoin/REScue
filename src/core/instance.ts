@@ -51,6 +51,8 @@ export const STALE_ATTRS = [
   'data-rescue-ov',
   // The old Reddit look's switch on <html>: a new instance sets it again if its module is on.
   'data-rescue-skin',
+  // Bridge element refs (core/bridge-client.ts): the new instance stamps its own, with its token.
+  'data-rescue-ref',
 ];
 
 /** Remove everything an instance other than `token` left on the page. Returns how many. */

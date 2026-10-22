@@ -8,7 +8,8 @@
 import { h } from '../../core/dom';
 import { hint, label } from '../../core/hints';
 import type { BoundGetJson, MineSub } from '../../core/redditJson';
-import { addRow, shortcutItems, type RawRow } from './shortcutModel';
+import { placeAbove } from './shortcutControls';
+import { addRow, shortcutHref, shortcutItems, type RawRow } from './shortcutModel';
 
 export const MINE_PAGE_LIMIT = 100;
 export const MINE_MAX_PAGES = 25;
@@ -70,6 +71,12 @@ export function filterSubs(subs: readonly MineSub[], query: string): MineSub[] {
 /** The shortcut target for a subscription: its name, or `u/name` for a profile. */
 export const targetOf = (s: MineSub): string =>
   s.prefixed.toLowerCase().startsWith('u/') ? s.prefixed : s.name;
+
+/**
+ * Where a subscription's link goes: the `url` from Reddit's answer, but only as a path on this
+ * site (shortcutHref). Anything else (a full address, `javascript:`, `//host`) gets no link.
+ */
+export const mineHref = (s: MineSub): string | null => shortcutHref(s.url);
 
 /** Add the picked subscriptions that the bar does not have yet, keeping the order they are in. */
 export function importRows(
@@ -148,9 +155,6 @@ export function openMine(ui: MineUi, anchor: HTMLElement): void {
     foot,
   );
   box.style.cssText = PANEL;
-  const r = anchor.getBoundingClientRect();
-  box.style.left = `${Math.max(0, Math.round(r.left))}px`;
-  box.style.bottom = `${Math.round(window.innerHeight - r.top + 2)}px`;
 
   function row(s: MineSub): HTMLElement {
     const check = h('input', {
@@ -165,7 +169,10 @@ export function openMine(ui: MineUi, anchor: HTMLElement): void {
       else picked.delete(s.name);
       sync();
     });
-    const go = h('a', { href: s.url, title: hint.mineGo(s.prefixed) }, s.prefixed);
+    const href = mineHref(s);
+    const go = href
+      ? h('a', { href, title: hint.mineGo(s.prefixed) }, s.prefixed)
+      : h('span', null, s.prefixed);
     go.style.cssText = 'color:inherit';
     const extra = [
       s.over18 ? ' 18+' : '',
@@ -240,6 +247,7 @@ export function openMine(ui: MineUi, anchor: HTMLElement): void {
   };
   document.addEventListener('mousedown', outside, true);
   (document.body ?? document.documentElement).appendChild(box);
+  placeAbove(box, anchor); // above the bar, or below it when the bar is at the top of the page
   sync();
   load();
   search.focus();

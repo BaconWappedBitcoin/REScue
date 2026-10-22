@@ -149,6 +149,11 @@ export function userMenuRoots(doc: Document = document): Element[] {
   return [...doc.querySelectorAll(C.chrome.userMenu)];
 }
 
+/** Where a profile page writes its user's name as plain text (header, "u/name", search chip). */
+export function profileNameRoots(doc: Document = document): Element[] {
+  return [...doc.querySelectorAll(C.chrome.profileNames)];
+}
+
 /** `/user/<name>` (or `/u/<name>`) in a link's href, lower-cased; null for any other link. */
 export function userOfHref(href: string | null): string | null {
   const m = /^(?:https?:\/\/[^/]+)?\/(?:user|u)\/([^/?#]+)/i.exec(href ?? '');

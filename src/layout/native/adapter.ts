@@ -7,6 +7,7 @@
  */
 import { C } from '../../contracts/reddit';
 import { hint } from '../../core/hints';
+import { OWNER_ATTR } from '../../core/instance';
 import type { ItemBatch } from '../../core/types';
 import { isSearchPost, searchTimeElement, searchTitleAnchor } from '../../model/search-post';
 import type { Decorations, Slot } from '../decorations';
@@ -16,6 +17,8 @@ const COLLAPSED_ATTR = 'data-rescue-collapsed';
 const SLOT_ATTR = C.slotAttr;
 const PLACEMENT_ORDER: Slot[] = ['author', 'tagline', 'domain', 'title'];
 const ITEM_SELECTOR = [C.post, C.search.post, C.comment, C.profileComment].join(',');
+/** Below this many tracked items nothing is pruned. */
+const PRUNE_MIN = 1000;
 
 type ItemKind = 'post' | 'comment' | 'profileComment';
 
@@ -42,6 +45,8 @@ export class NativeAdapter {
   /** Which tracked item an element is the host of (the repair observer's way in). */
   private readonly hostIds = new WeakMap<Element, string>();
   private observer: MutationObserver | null = null;
+  /** Tracked items after the last pruning; pruned again once the count has doubled. */
+  private sizeAtPrune = 0;
   private readonly dirty = new Set<string>();
   private healQueued = false;
 
@@ -77,7 +82,27 @@ export class NativeAdapter {
       ids.push(pc.id);
     }
     for (const id of ids) this.apply(id); // later decoration changes arrive via onChange
+    if (this.items.size > Math.max(PRUNE_MIN, this.sizeAtPrune * 2)) this.prune();
     this.watch();
+  }
+
+  /**
+   * Forget items no longer on the page. An endless feed or a long thread otherwise keeps every
+   * element it ever showed until the route changes (filteReddit's session prunes the same way).
+   */
+  private prune(): void {
+    for (const [id, item] of this.items) {
+      if (item.host.isConnected) continue;
+      this.items.delete(id);
+      this.marked.delete(id);
+      this.collapsedIds.delete(id);
+    }
+    this.sizeAtPrune = this.items.size;
+  }
+
+  /** How many items are tracked (tests). */
+  trackedCount(): number {
+    return this.items.size;
   }
 
   /**
@@ -126,11 +151,14 @@ export class NativeAdapter {
    * included, and that is exactly what needs repairing.
    */
   private ownChange(r: MutationRecord): boolean {
-    return (
-      r.removedNodes.length === 0 &&
-      r.addedNodes.length > 0 &&
-      [...r.addedNodes].every((n) => this.placed.has(n))
-    );
+    if (r.removedNodes.length !== 0 || r.addedNodes.length === 0) return false;
+    // Nodes this adapter placed, and any other node REScue made (stamped by core/instance: a
+    // module's own controls, the old look's rows), are never Reddit re-rendering the item.
+    for (const n of r.addedNodes) {
+      if (this.placed.has(n) || (n instanceof Element && n.hasAttribute(OWNER_ATTR))) continue;
+      return false;
+    }
+    return true;
   }
 
   apply(id: string): void {
@@ -401,5 +429,6 @@ export class NativeAdapter {
     this.items.clear();
     this.marked.clear();
     this.collapsedIds.clear();
+    this.sizeAtPrune = 0;
   }
 }

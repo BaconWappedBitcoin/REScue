@@ -8,12 +8,61 @@
 import { C } from '../contracts/reddit';
 import { ownQueryAll, parseNumber } from '../core/dom';
 
+const tests = new Map<string, (el: Element) => boolean>();
+
+/**
+ * `el.matches(sel)`, with a quick look first that rules most elements out: the tag name a single
+ * selector starts with (`shreddit-comment…`), or the attribute it starts with (`[slot="…"]`).
+ * Walks over a comment's elements call this for every element.
+ */
+export function matcher(sel: string): (el: Element) => boolean {
+  let test = tests.get(sel);
+  if (test) return test;
+  const single = !/[\s,>+~]/.test(sel.replace(/\[[^\]]*\]/g, '').replace(/\([^)]*\)/g, ''));
+  const tag = single ? /^[a-z][\w-]*/i.exec(sel)?.[0].toLowerCase() : undefined;
+  const attr = single ? /^\[([\w-]+)="([^"]*)"\]/.exec(sel) : null;
+  if (tag) test = (el) => el.localName === tag && el.matches(sel);
+  else if (attr) test = (el) => el.getAttribute(attr[1]!) === attr[2] && el.matches(sel);
+  else test = (el) => el.matches(sel);
+  tests.set(sel, test);
+  return test;
+}
+
+/** The first child of `el` matching `sel`: a direct lookup (a `:scope >` query reads the whole subtree). */
+export function childMatching(el: Element | null | undefined, sel: string): Element | null {
+  const test = matcher(sel);
+  for (let c = el?.firstElementChild ?? null; c; c = c.nextElementSibling) if (test(c)) return c;
+  return null;
+}
+
+/**
+ * The elements matching `sel` in the comment's OWN part, in document order: the same set as
+ * `ownQueryAll(host, sel, C.comment)`, but found by walking the comment's own elements only, never
+ * stepping into a nested reply (a top comment's replies can be thousands of elements). With
+ * `first`, stops at the first match.
+ */
+export function ownMatches(host: Element, sel: string, first = false): Element[] {
+  const out: Element[] = [];
+  const isComment = matcher(C.comment);
+  const test = matcher(sel);
+  const walk = (el: Element): boolean => {
+    for (let c = el.firstElementChild; c; c = c.nextElementSibling) {
+      if (isComment(c)) continue;
+      if (test(c)) {
+        out.push(c);
+        if (first) return true;
+      }
+      if (walk(c)) return true;
+    }
+    return false;
+  };
+  walk(host);
+  return out;
+}
+
 /** The comment's OWN action row (never a nested reply's), or null while it has not appeared. */
 export function ownActionRow(host: Element): Element | null {
-  for (const row of host.querySelectorAll(C.commentActions.row)) {
-    if (row.closest(C.comment) === host) return row;
-  }
-  return null;
+  return ownMatches(host, C.commentActions.row, true)[0] ?? null;
 }
 
 /**
@@ -60,9 +109,12 @@ const isOn = (v: string | null): boolean => {
 /**
  * The comment's score, or null when unknown: no hydrated row yet, a hidden score, or no number.
  * Never the comment's own `score` attribute alone, because that reads "1" when the score is hidden.
+ * A caller that already holds the comment's own row passes it.
  */
-export function commentScoreOf(host: Element): number | null {
-  const row = ownActionRow(host);
+export function commentScoreOf(
+  host: Element,
+  row: Element | null = ownActionRow(host),
+): number | null {
   if (!row || !hydrated(row) || isOn(row.getAttribute(A.scoreHiddenAttr))) return null;
   return parseNumber(row.getAttribute(A.scoreAttr) ?? host.getAttribute(C.commentAttr.score));
 }

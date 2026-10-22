@@ -2,7 +2,7 @@
  * Background: storage migrations at startup, settings broadcast, backup export/import, sync
  * mirroring, and module-health collection (contracts/messaging.md).
  */
-import { buildBackup, parseBackup } from '../core/backup';
+import { BACKUP_KEYS, buildBackup, parseBackup } from '../core/backup';
 import { MIGRATIONS, runMigrations, type StoredData } from '../core/storage/migrations';
 import { normalizeProfile } from '../core/settings';
 import {
@@ -161,6 +161,8 @@ export default defineBackground(() => {
 
   // Opt-in media download blocking (inlineMedia). The rules exist only while the user has asked for
   // them and granted the optional permission; the optional API is absent until then.
+  /** The parsed neutrality score file, read once (neutralityFilter asks from every tab). */
+  let neutrality: Promise<unknown> | null = null;
   let permissionWindow: number | undefined;
   const blockApi: BlockApi = {
     readSettings: async () => (await browser.storage.local.get('settings')).settings,
@@ -232,8 +234,18 @@ export default defineBackground(() => {
         return browser.storage.local.get(null).then(async (all) => {
           const r = parseBackup(msg.json, all as StoredData, msg.mode);
           if (!r.ok) return r;
-          if (msg.mode === 'replace') await browser.storage.local.clear();
-          await browser.storage.local.set(r.data);
+          // Write first, so a failed write loses nothing. Replace then removes only what the
+          // backup format owns and this file does not carry; keys a backup never holds
+          // (collapsed, hiddenPosts, mod:*, syncState, ...) are not the backup's to remove.
+          try {
+            await browser.storage.local.set(r.data);
+          } catch (err) {
+            return { ok: false, error: `Could not save the backup: ${String(err)}` };
+          }
+          if (msg.mode === 'replace') {
+            const absent = BACKUP_KEYS.filter((k) => !(k in r.data));
+            if (absent.length) await browser.storage.local.remove(absent);
+          }
           await broadcastSettingsChanged();
           return { ok: true };
         });
@@ -271,10 +283,13 @@ export default defineBackground(() => {
       case 'health.get':
         return Promise.resolve({ ok: true, reports: Object.fromEntries(health) });
       case 'neutrality.data':
-        // The score file is not in the page script; it is read from the extension only on request.
-        return readBundledJson('neutrality-scores.json')
-          .then((data) => ({ ok: true, data }))
-          .catch(() => ({ ok: false }));
+        // The score file is not in the page script; it is read from the extension only on request,
+        // once per background lifetime (every tab asks for the same 465 KB).
+        neutrality ??= readBundledJson('neutrality-scores.json').catch((err: unknown) => {
+          neutrality = null; // try again on the next request
+          throw err;
+        });
+        return neutrality.then((data) => ({ ok: true, data })).catch(() => ({ ok: false }));
       default:
         return undefined;
     }

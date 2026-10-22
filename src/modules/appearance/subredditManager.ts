@@ -19,12 +19,24 @@
  * Also here (shortcutVisits.ts): a separate list per account (shortcutsPerAccount), the last
  * visit to each subreddit kept on this device for a "Last visited" sort (storeSubredditVisit), the
  * group-menu and edit-word delays, capital letters (allowLowercase) and the RandNSFW link.
+ * The "mail ▾" and "feeds ▾" words (barMenus.ts) are RES messageMenu and multiredditNavbar, moved
+ * from Reddit's header (not reachable) into this bar; the feeds come from /api/multi/mine.json.
  * Not built: RES's subscribe buttons and the MyRandom/Users links, which are Reddit's own features
  * now.
  */
 import { jsonFor } from '../../core/redditJson';
-import { setOption } from '../../core/settings';
+import { moduleOn, optionOf, setOption } from '../../core/settings';
 import { defineModule, type ModuleContext, type Route } from '../../core/types';
+import {
+  DEFAULT_MAIL_LINKS,
+  DEFAULT_SECTION_LINKS,
+  forgetMenus,
+  mailHref,
+  sectionPath,
+  type MailLink,
+  type MenuHost,
+  type SectionLink,
+} from './barMenus';
 import { removeBar, renderBar, type BarCtx } from './shortcutBar';
 import { fetchSubscriptions, forgetMine } from './shortcutMine';
 import { FORMAT_HELP, migrateRows, shortcutHref, type RawRow, type Visits } from './shortcutModel';
@@ -54,6 +66,12 @@ interface Ctx extends BarCtx {
   options: BarCtx['options'] & {
     shortcutsPerAccount?: boolean;
     storeSubredditVisitIncognito?: boolean;
+    linkMail?: boolean;
+    mailLinks?: MailLink[];
+    mailHoverDelay?: number;
+    linkFeeds?: boolean;
+    feedSectionLinks?: SectionLink[];
+    feedsHoverDelay?: number;
   };
 }
 
@@ -112,8 +130,9 @@ function noteVisit(ctx: Ctx, route: Route): void {
 function sync(ctx: Ctx, rows: RawRow[] = ctx.options.subreddits): void {
   const migrated = migrateRows(rows, Date.now());
   // The dashboard module owns the choice to put its word in the bar; the bar only follows it.
-  const dash = ctx.settings.profile().modules.dashboard;
-  const linkDashboard = dash?.enabled === true && dash.options?.dashboardShortcut !== false;
+  const linkDashboard =
+    moduleOn(ctx.settings, 'dashboard') &&
+    optionOf(ctx.settings, 'dashboard', 'dashboardShortcut') === true;
   const view: Ctx = {
     ...ctx,
     visits,
@@ -135,13 +154,36 @@ function sync(ctx: Ctx, rows: RawRow[] = ctx.options.subreddits): void {
         list: (force?: boolean) => fetchSubscriptions(getJson, force),
       }
     : undefined;
-  renderBar(view, save, mine);
+  renderBar(view, save, mine, menuHost(ctx, getJson));
   // Dated rows are saved back once per set of rows, however often the bar is drawn meanwhile.
   if (migrated.changed && (migratedFrom !== rows || migratedVia !== ctx.settings)) {
     migratedFrom = rows;
     migratedVia = ctx.settings;
     save(migrated.rows).catch(() => {});
   }
+}
+
+/** The mail and feeds words (barMenus.ts); the feeds are read only when that menu is opened. */
+function menuHost(ctx: Ctx, getJson: ReturnType<typeof jsonFor>): MenuHost {
+  const o = ctx.options;
+  return {
+    signedIn: ctx.session.signedIn,
+    mail:
+      o.linkMail !== false
+        ? { links: o.mailLinks ?? DEFAULT_MAIL_LINKS, hoverDelay: o.mailHoverDelay ?? 1000 }
+        : undefined,
+    feeds:
+      o.linkFeeds !== false
+        ? {
+            sections: o.feedSectionLinks ?? DEFAULT_SECTION_LINKS,
+            hoverDelay: o.feedsHoverDelay ?? 1000,
+            load: async () => {
+              const res = await getJson('multis', {});
+              return res.ok ? res.data : null;
+            },
+          }
+        : undefined,
+  };
 }
 
 /** Draw the bar; first switch the list to this account's own when the account changed. */
@@ -176,7 +218,7 @@ export const subredditManager = defineModule({
   category: 'appearance',
   title: 'Subreddit shortcut bar',
   description:
-    'A slim bar in the bottom-left corner with your chosen subreddits and links, in your order. Hover a link to edit or delete it (or right-click it), press + to add one, drag links to reorder them or onto the delete zone, or sort them. A group such as a+b lists its subreddits when you hover it. On a subreddit page a “+shortcut” button adds it, and “−shortcut” removes it. The “my subreddits” word lists your subscriptions, with a search box, and can add the ones you tick to the bar. It reads them from Reddit (one read-only request per page of 100, only when you press it, kept for about an hour); signed out it is disabled.',
+    'A slim bar in the bottom-left corner with your chosen subreddits and links, in your order. Hover a link to edit or delete it (or right-click it), press + to add one, drag links to reorder them or onto the delete zone, or sort them. A group such as a+b lists its subreddits when you hover it. On a subreddit page a “+shortcut” button adds it, and “−shortcut” removes it. The “my subreddits” word lists your subscriptions, with a search box, and can add the ones you tick to the bar. It reads them from Reddit (one read-only request per page of 100, only when you press it, kept for about an hour); signed out it is disabled. Signed in, “mail ▾” lists your mail pages and “feeds ▾” your custom feeds with their hot, new and top pages.',
   enabledByDefault: false,
   options: {
     subreddits: {
@@ -221,6 +263,70 @@ export const subredditManager = defineModule({
       default: true,
       title: 'Show a “my subreddits” control (signed in)',
       description: 'Lists the subreddits you subscribe to and can add them to this bar.',
+    },
+    linkMail: {
+      type: 'boolean',
+      default: true,
+      title: 'Show a mail menu',
+      description:
+        'A “mail ▾” word (signed in) that lists your inbox, unread, sent and other mail pages. RES put this menu on Reddit’s mail icon; REScue keeps it in this bar.',
+    },
+    mailLinks: {
+      type: 'table',
+      default: DEFAULT_MAIL_LINKS.map((l) => ({ ...l })),
+      dependsOn: 'linkMail',
+      title: 'Links in the mail menu',
+      description:
+        'Each address is a path on Reddit (such as /message/unread/) or on https://mod.reddit.com.',
+      columns: [
+        { key: 'text', title: 'Text', type: 'text' },
+        { key: 'url', title: 'Address', type: 'text' },
+      ],
+      validateRow: (row) =>
+        typeof row.url === 'string' && row.url.trim() !== '' && !mailHref(row.url)
+          ? 'Use a path on Reddit, such as /message/inbox/, or an address on https://mod.reddit.com.'
+          : null,
+    },
+    mailHoverDelay: {
+      type: 'number',
+      default: 1000,
+      min: 0,
+      max: 5000,
+      dependsOn: 'linkMail',
+      title: 'Delay before the mail menu opens on hover (milliseconds)',
+      description:
+        'A click, or Enter, opens it at once. It closes a moment after the pointer leaves.',
+    },
+    linkFeeds: {
+      type: 'boolean',
+      default: true,
+      title: 'Show a custom-feeds menu',
+      description:
+        'A “feeds ▾” word (signed in) that lists your custom feeds; hover one (or press →) for its hot, new, top and other pages. The list is read from Reddit (one read-only request, only when you open the menu, kept for about an hour).',
+    },
+    feedSectionLinks: {
+      type: 'table',
+      default: DEFAULT_SECTION_LINKS.map((l) => ({ ...l })),
+      dependsOn: 'linkFeeds',
+      title: 'Pages listed for each custom feed',
+      description:
+        'Added to the end of the feed’s address: empty for hot, new/ for new, top/?t=week for the week’s top.',
+      columns: [
+        { key: 'text', title: 'Text', type: 'text' },
+        { key: 'path', title: 'Added to the address', type: 'text' },
+      ],
+      validateRow: (row) =>
+        typeof row.path === 'string' && sectionPath(row.path) === null
+          ? 'Use letters, digits and slashes only, such as new/ or top/?t=week.'
+          : null,
+    },
+    feedsHoverDelay: {
+      type: 'number',
+      default: 1000,
+      min: 0,
+      max: 5000,
+      dependsOn: 'linkFeeds',
+      title: 'Delay before the custom-feeds menu opens on hover (milliseconds)',
     },
     showAddCurrent: {
       type: 'boolean',
@@ -303,6 +409,7 @@ export const subredditManager = defineModule({
     epoch++;
     latest = null;
     forgetMine();
+    forgetMenus();
     removeBar();
     removeStyle(STYLE_ID);
   },

@@ -233,6 +233,9 @@ export const voteEnhancements = defineModule({
     stopRows?.();
     stopRows = null;
     removeStyle(HIGHLIGHT_STYLE_ID);
+    // Switched off live: the ratio and score labels leave the page too.
+    current?.ui.removeDecorations('rescue-upvote-ratio');
+    current?.ui.removeDecorations('rescue-score-chip');
     seen.clear();
     chips.clear();
     current = null;

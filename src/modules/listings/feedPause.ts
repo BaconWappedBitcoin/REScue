@@ -14,7 +14,7 @@
  * With the defaults (auto-load on, no pause count) the module does nothing. Idea from RES
  * lib/modules/neverEndingReddit.js (GPL-3.0, the RES contributors, commit 4defffc); new code.
  */
-import { h } from '../../core/dom';
+import { addedMatching, h } from '../../core/dom';
 import { hint, label } from '../../core/hints';
 import { Paginator, type LoadResult } from '../../core/paginator';
 import { defineModule, type ItemBatch, type MenuItem, type ModuleContext } from '../../core/types';
@@ -420,8 +420,12 @@ export const feedPause = defineModule({
     // Reddit swaps the loader for a new one after each page; look again after each burst of changes.
     // A loader not seen before is dealt with at once (before Reddit's own observers see it), so a
     // pause is in place by the time the next page could be asked for.
-    s.observer = new MutationObserver(() => {
-      if (loadersNow().some((p) => !s.seen.has(p))) {
+    s.observer = new MutationObserver((records) => {
+      // Off a feed (a thread loading its comments) there is nothing to hold or count: the route
+      // change already let every loader go (onRoute). A loader not seen before is one this burst
+      // added, so only the added nodes are looked at.
+      if (!onFeed(s)) return;
+      if (addedMatching(records, feedLoaderSelector()).some((p) => !s.seen.has(p))) {
         scan(s);
         return;
       }

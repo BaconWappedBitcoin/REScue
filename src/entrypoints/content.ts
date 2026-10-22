@@ -10,14 +10,14 @@ import { BridgeClient } from '../core/bridge-client';
 import { createActionApi } from '../core/actions';
 import { createNotices } from '../core/notices';
 import { Pipeline } from '../core/pipeline';
-import { createRegistry } from '../core/registry';
+import { changedModules, createRegistry, rerunSet, settled } from '../core/registry';
 import { classify, watchRoute } from '../core/route';
 import {
+  createSettingsSave,
   isModuleEnabled,
   loadProfile,
-  mergeProfileChange,
-  normalizeProfile,
   resolveOptions,
+  saveOrNotify,
   type SettingsProfile,
 } from '../core/settings';
 import { LocalStore, STORAGE_KEYS } from '../core/storage/store';
@@ -42,6 +42,8 @@ import { readNoticePrefs, withMutedTypes } from '../modules/core/noticeSettings'
 const FROM_OLD_PARAM = 'rescue_from_old';
 const PERF_ATTR = 'data-rescue-perf';
 const PERF_PREFIX = '[REScue:perf]';
+/** A burst of saves (a slider dragged, a table typed into) is followed once, after it settles. */
+const SETTINGS_SETTLE_MS = 150;
 
 export default defineContentScript({
   matches: ['*://www.reddit.com/*', '*://reddit.com/*', '*://sh.reddit.com/*'],
@@ -114,7 +116,12 @@ export default defineContentScript({
       ensureTheme(); // REScue's colours, following Reddit's light or dark mode
       const keys = new KeyDispatcher();
       try {
-        const store = new LocalStore();
+        const store = new LocalStore((err) =>
+          notices.show(
+            `REScue could not save your data: ${err instanceof Error ? err.message : String(err)}`,
+            { kind: 'error' },
+          ),
+        );
         let profile: SettingsProfile = await loadProfile(store);
         let session = readSession();
         const actions = createActionApi({ bridge, session: () => session });
@@ -126,6 +133,7 @@ export default defineContentScript({
           markAuthor: (i, c) => deco.markAuthor(i, c),
           unmarkAuthor: (i, c) => deco.unmarkAuthor(i, c),
           decorate: (i, s, n) => deco.decorate(i, s, n),
+          removeDecorations: (k) => deco.removeKind(k),
           addClass: (i, c) => deco.addClass(i, c),
           addHeaderTool: (n) => toolbar.addHeaderTool(n),
           addBanner: (n) => toolbar.addBanner(n),
@@ -140,28 +148,21 @@ export default defineContentScript({
           set: (key, value) => store.set(key, value),
         };
         const contexts = new Map<string, ModuleContext>();
-        let saveSeq = 0;
-        let saveQueue: Promise<void> = Promise.resolve();
+        const save = createSettingsSave({
+          profile: () => profile,
+          setProfile: (p) => {
+            profile = p;
+          },
+          read: async () =>
+            (await browser.storage.local.get(STORAGE_KEYS.settings))[STORAGE_KEYS.settings],
+          // Written immediately (not debounced): the console reports "saved" only after this.
+          write: (p) => browser.storage.local.set({ [STORAGE_KEYS.settings]: p }),
+          onSaved: () =>
+            void browser.runtime.sendMessage({ type: 'settings.changed' }).catch(() => {}),
+        });
         const settings: SettingsApi = {
           profile: () => profile,
-          async save(next, base = profile) {
-            profile = next; // later callers build on this at once
-            const mine = ++saveSeq;
-            const run = async (): Promise<void> => {
-              // Re-read storage right before writing: only this change is applied to it.
-              const stored = normalizeProfile(
-                (await browser.storage.local.get(STORAGE_KEYS.settings))[STORAGE_KEYS.settings],
-              );
-              const merged = mergeProfileChange(stored, normalizeProfile(base), next);
-              // Written immediately (not debounced): the console reports "saved" only after this.
-              await browser.storage.local.set({ [STORAGE_KEYS.settings]: merged });
-              if (mine === saveSeq) profile = merged;
-              void browser.runtime.sendMessage({ type: 'settings.changed' }).catch(() => {});
-            };
-            const turn = saveQueue.then(run, run);
-            saveQueue = turn.catch(() => undefined);
-            return turn;
-          },
+          save,
           definitions: () => MODULES,
           status: (id) => registry.status(id),
           report: () => registry.report(),
@@ -198,7 +199,8 @@ export default defineContentScript({
 
         notices.configure({
           muted: () => readNoticePrefs(profile).mutedTypes,
-          setMuted: (next) => void settings.save(withMutedTypes(profile, next)),
+          setMuted: (next) =>
+            void saveOrNotify({ settings, notices }, withMutedTypes(profile, next)),
           closeDelayMs: () => readNoticePrefs(profile).closeDelaySeconds * 1000,
           fadeOutMs: () => readNoticePrefs(profile).fadeOutSeconds * 1000,
           moduleTitle: (id) => MODULES.find((d) => d.id === id)?.title,
@@ -267,7 +269,8 @@ export default defineContentScript({
 
         const pipeline = new Pipeline({
           onBatch(batch) {
-            registry.items(batch);
+            // Every module's changes to an item are placed once, when the item is tracked below.
+            deco.batch(() => registry.items(batch));
             native.track(batch);
             selection.track(batch);
           },
@@ -311,19 +314,28 @@ export default defineContentScript({
           }),
         );
 
+        // The settings as the modules last followed them (the saving tab has `profile` already).
+        let applied: SettingsProfile = structuredClone(profile);
+        const followSettings = async (): Promise<void> => {
+          const p = await loadProfile(store);
+          if (!instance.alive()) return;
+          profile = p;
+          const named = await registry.settingsChanged();
+          const only = rerunSet(named, changedModules(applied, p));
+          applied = structuredClone(p);
+          if (only?.size === 0) return;
+          // Modules that were switched on or whose settings changed decorate the items already on
+          // the page again: the pipeline hands them its items in slices, nothing is parsed again.
+          // Decorations.replace keeps duplicates from appearing.
+          pipeline.replay((b) => deco.batch(() => registry.items(b, only ?? undefined)));
+        };
+        const followLater = settled(followSettings, SETTINGS_SETTLE_MS, (err) =>
+          console.error('[REScue] following the new settings failed', err),
+        );
+        onDispose(() => followLater.stop());
         const onMessage = (msg: unknown) => {
           if (!instance.alive()) return undefined;
-          if ((msg as { type?: string })?.type === 'settings.changed') {
-            void loadProfile(store).then(async (p) => {
-              profile = p;
-              await registry.settingsChanged();
-              // Modules that changed options (or were switched on/off) need a chance to decorate
-              // the posts already on the page. The pipeline skips items marked seen, so reset the
-              // marks and re-run one batch. Decorations.replace keeps duplicates from appearing.
-              pipeline.reset();
-              pipeline.flush();
-            });
-          }
+          if ((msg as { type?: string })?.type === 'settings.changed') followLater.poke();
           return undefined;
         };
         browser.runtime.onMessage.addListener(onMessage);

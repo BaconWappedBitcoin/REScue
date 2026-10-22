@@ -21,7 +21,13 @@ import {
   validLink,
 } from '../../src/modules/users/tagStore';
 import { userTagger } from '../../src/modules/users/userTagger';
-import { flatThreadHtml, listingHtml, mount, nestedThreadHtml, searchPageHtml } from '../fixtures/pages';
+import {
+  flatThreadHtml,
+  listingHtml,
+  mount,
+  nestedThreadHtml,
+  searchPageHtml,
+} from '../fixtures/pages';
 
 const NOW = 1_700_000_000_000;
 
@@ -132,6 +138,7 @@ async function boot(stored: unknown, route: Partial<ModuleContext['route']> = {}
     markAuthor: (i, c) => deco.markAuthor(i, c),
     unmarkAuthor: (i, c) => deco.unmarkAuthor(i, c),
     decorate: (i, s, n) => deco.decorate(i, s, n),
+    removeDecorations: (k) => deco.removeKind(k),
     addClass: (i, c) => deco.addClass(i, c),
     setRevealHidden: (on) => deco.setReveal(on),
     addHeaderTool: () => {},
@@ -334,9 +341,10 @@ describe('comment ignore button', () => {
     comments[0]!.author = 'me_the_reader';
     comments[0]!.source.setAttribute('author', 'me_the_reader');
     deliver({ comments });
-    userTagger.onSettings!(
-      { ..._ctx, session: { signedIn: true, username: 'me_the_reader' } } as never,
-    );
+    userTagger.onSettings!({
+      ..._ctx,
+      session: { signedIn: true, username: 'me_the_reader' },
+    } as never);
 
     expect(extrasOf(comments[0]!.source)?.querySelector('.rescue-ignore-user')).toBeNull();
     expect(ignoreBtns().length).toBe(comments.length - 1);
@@ -363,7 +371,9 @@ describe('comment ignore button', () => {
     for (const c of comments.filter((c) => c.author === 'repeater')) {
       const body = ownBody(c.source);
       expect(body.hasAttribute('data-rescue-collapsed')).toBe(true);
-      expect(extrasOf(c.source)!.querySelector<HTMLButtonElement>('.rescue-ignore-user')!.textContent).toBe('unignore');
+      expect(
+        extrasOf(c.source)!.querySelector<HTMLButtonElement>('.rescue-ignore-user')!.textContent,
+      ).toBe('unignore');
     }
 
     const second = comments.filter((c) => c.author === 'repeater')[0]!;
@@ -374,7 +384,9 @@ describe('comment ignore button', () => {
     expect((store.userTags as Record<string, { ignored: boolean }>).repeater).toBeUndefined();
     for (const c of comments.filter((c) => c.author === 'repeater')) {
       expect(ownBody(c.source).hasAttribute('data-rescue-collapsed')).toBe(false);
-      expect(extrasOf(c.source)!.querySelector<HTMLButtonElement>('.rescue-ignore-user')!.textContent).toBe('ignore');
+      expect(
+        extrasOf(c.source)!.querySelector<HTMLButtonElement>('.rescue-ignore-user')!.textContent,
+      ).toBe('ignore');
     }
   });
 
@@ -424,9 +436,10 @@ describe('post ignore button', () => {
     mine.source.setAttribute('author', 'me_the_reader');
     const { deliver, ctx: _ctx } = await boot({});
     deliver({ posts });
-    userTagger.onSettings!(
-      { ..._ctx, session: { signedIn: true, username: 'me_the_reader' } } as never,
-    );
+    userTagger.onSettings!({
+      ..._ctx,
+      session: { signedIn: true, username: 'me_the_reader' },
+    } as never);
 
     expect(extrasOf(mine.source)?.querySelector('.rescue-ignore-user')).toBeNull();
     expect(ignoreBtns().length).toBe(posts.length - 1);
@@ -495,7 +508,8 @@ describe('post ignore button', () => {
     const { deliver, deco } = await boot({}, { kind: 'thread', postId: post.id });
     deliver({ posts: [post] });
 
-    const btn = () => extrasOf(post.source)!.querySelector<HTMLButtonElement>('.rescue-ignore-user')!;
+    const btn = () =>
+      extrasOf(post.source)!.querySelector<HTMLButtonElement>('.rescue-ignore-user')!;
     expect(btn().textContent).toBe('ignore');
     btn().click();
     await tick();

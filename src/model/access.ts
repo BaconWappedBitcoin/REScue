@@ -5,17 +5,15 @@
  * light-DOM thread links. Nothing here pierces a shadow root.
  */
 import { C } from '../contracts/reddit';
-import { ownQueryAll } from '../core/dom';
+import { ownQueryAll, ownQueryFirst } from '../core/dom';
 
 /** The item's OWN body element (never a nested reply's), or null. */
 export function ownBody(source: Element): Element | null {
   const isComment = source.matches(C.comment);
-  return (
-    ownQueryAll(
-      source,
-      isComment ? C.commentBody : C.postBody,
-      isComment ? C.comment : C.post,
-    )[0] ?? null
+  return ownQueryFirst(
+    source,
+    isComment ? C.commentBody : C.postBody,
+    isComment ? C.comment : C.post,
   );
 }
 
@@ -34,9 +32,10 @@ export const inItemBody = (el: Element): boolean =>
  * comment rather than to a reply nested inside it (contracts: comment.details).
  */
 export function ownDetails(host: Element): HTMLDetailsElement | null {
-  for (const d of host.querySelectorAll(C.commentDetails)) {
-    if (d.closest(C.comment) !== host || !(d instanceof HTMLDetailsElement)) continue;
-    if ([...d.children].some((c) => c.matches(C.commentSummary))) return d;
+  // Only the comment's own part is walked, never the replies nested inside it (dom.ts).
+  for (const d of ownQueryAll(host, C.commentDetails, C.comment)) {
+    if (!(d instanceof HTMLDetailsElement)) continue;
+    for (const c of d.children) if (c.matches(C.commentSummary)) return d;
   }
   return null;
 }

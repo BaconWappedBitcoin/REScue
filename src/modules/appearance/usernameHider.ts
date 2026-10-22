@@ -11,7 +11,7 @@
  * contain the real name.
  */
 import { defineModule } from '../../core/types';
-import { profileLinks, userMenuRoots, userOfHref } from '../../model/appearance';
+import { profileLinks, profileNameRoots, userMenuRoots, userOfHref } from '../../model/appearance';
 
 export const DEFAULT_MASK = '~anon~';
 const MAX_MASK = 40;
@@ -25,6 +25,8 @@ interface Swap {
 const swaps = new Map<Text, Swap>();
 let names = new Set<string>();
 let mask = DEFAULT_MASK;
+/** Per-name masks that replace `mask` (your own name's per-account text). */
+let special = new Map<string, string>();
 let observer: MutationObserver | null = null;
 let pending = new Set<Node>();
 let frame = 0;
@@ -48,12 +50,43 @@ export function namesToHide(own: string | null, hideOwn: boolean, listed: string
   return out;
 }
 
-/** `text` with every hidden name (as a whole name, any case) replaced by `by`. */
-export function maskText(text: string, hide: Set<string>, by: string): string {
+/**
+ * `text` with every hidden name (as a whole name, any case) replaced by `by`, or by the name's
+ * own entry in `byName` (keys lower-cased) when it has one.
+ */
+export function maskText(
+  text: string,
+  hide: Set<string>,
+  by: string,
+  byName?: ReadonlyMap<string, string>,
+): string {
   if (!hide.size) return text;
   const alt = [...hide].map(escapeRe).join('|');
   const re = new RegExp(`(?<![A-Za-z0-9_-])(?:${alt})(?![A-Za-z0-9_-])`, 'gi');
-  return text.replace(re, () => by);
+  return text.replace(re, (m) => byName?.get(m.toLowerCase()) ?? by);
+}
+
+/**
+ * The per-account display text (RES perAccountDisplayText): the text of the row for the signed-in
+ * account, matched in any case, as `{name → text}`; empty when signed out or there is no such row.
+ */
+export function ownMask(own: string | null, rows: unknown): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!own || !Array.isArray(rows)) return out;
+  const me = own.toLowerCase();
+  for (const r of rows) {
+    if (typeof r !== 'object' || r === null) continue;
+    const { username, displayText } = r as Record<string, unknown>;
+    if (typeof username !== 'string' || typeof displayText !== 'string' || !displayText.trim()) {
+      continue;
+    }
+    const name = username
+      .trim()
+      .replace(/^\/?(?:u|user)\//i, '')
+      .toLowerCase();
+    if (name === me) return out.set(me, cleanMask(displayText));
+  }
+  return out;
 }
 
 function swapNode(node: Text): void {
@@ -62,7 +95,7 @@ function swapNode(node: Text): void {
   if (known && node.data === known.masked) return;
   swaps.delete(node);
   const original = node.data;
-  const masked = maskText(original, names, mask);
+  const masked = maskText(original, names, mask, special);
   if (masked === original) return;
   swaps.set(node, { original, masked });
   node.data = masked;
@@ -86,7 +119,9 @@ function scan(root: ParentNode): void {
 }
 
 function scanMenus(): void {
-  for (const menu of userMenuRoots()) {
+  // The user menu, and on a profile page its headers and search chip (live 2026-10-21 the name
+  // stayed visible there).
+  for (const menu of [...userMenuRoots(), ...profileNameRoots()]) {
     if (menu.closest(OWN_UI)) continue;
     for (const t of textNodes(menu)) {
       if (t.parentElement?.closest('script, style')) continue;
@@ -125,7 +160,13 @@ export function revertAll(): void {
 }
 
 interface Applicable {
-  options: { mask: string; hideOwn: boolean; hideUsers: string[]; showUsernameOnHover?: boolean };
+  options: {
+    mask: string;
+    hideOwn: boolean;
+    hideUsers: string[];
+    showUsernameOnHover?: boolean;
+    perAccountDisplayText?: unknown;
+  };
   session: { username: string | null };
 }
 
@@ -167,6 +208,7 @@ function apply(ctx: Applicable): void {
   const o = ctx.options;
   names = namesToHide(ctx.session.username, o.hideOwn, o.hideUsers);
   mask = cleanMask(o.mask);
+  special = ownMask(ctx.session.username, o.perAccountDisplayText);
   bindHover(Boolean(o.showUsernameOnHover) && names.size > 0);
   if (!names.size) return;
   scan(document);
@@ -187,6 +229,17 @@ export const usernameHider = defineModule({
       default: DEFAULT_MASK,
       title: 'Display text',
       description: 'What is shown instead of a hidden name.',
+    },
+    perAccountDisplayText: {
+      type: 'table',
+      default: [],
+      title: 'Display text for each of my accounts',
+      description:
+        'When you are signed in as one of these accounts, its own name shows this text instead of the one above. Other hidden names keep the text above.',
+      columns: [
+        { key: 'username', title: 'Account', type: 'text' },
+        { key: 'displayText', title: 'Display text', type: 'text' },
+      ],
     },
     hideOwn: {
       type: 'boolean',
@@ -237,5 +290,6 @@ export const usernameHider = defineModule({
     bindHover(false);
     revertAll();
     names = new Set();
+    special = new Map();
   },
 });

@@ -11,7 +11,7 @@ interface PageContract {
   required: boolean;            // required → its absence marks dependent modules degraded/disabled
   hosts?: Array<'www' | 'sh'>;  // per-host override (R9); default both
   verifiedAt?: string;          // ISO date of last live confirmation
-  status: 'verified' | 'inherited' | 'candidate';
+  status: 'verified' | 'inherited' | 'candidate' | 'retired'; // retired: Reddit stopped serving it
   probe: LiveProbe;             // how tests/live re-verifies it (page type + expectation)
   usedBy: ModuleId[] | 'core';
 }
@@ -39,6 +39,8 @@ interface PageContract {
 | partial.loadMethod | `loadContent` | inherited | Sheddit (bridge only) |
 | hover.user.endpoint | `/svc/shreddit/user-hover-card/{name}` | verified 2026-10-15 | R4 |
 | hover.community.endpoint | `/svc/shreddit/community-hover-card/{name}` | verified 2026-10-15 | R5 |
+| json.info | `/api/info.json` | retired 2026-10-21 (HTTP 403 text/html to a signed-in, same-origin read; nothing uses it) | live check 2026-10-21 |
+| json.comments | `/comments/{id}.json`, and one comment's thread `/comments/{post}/_/{comment}.json` (raw_json=1, limit, depth) | verified 2026-10-21 | live check 2026-10-21; replaces json.info for showSource, threadSubscriptions and the media viewer's original size |
 | hover.accept | `text/vnd.reddit.partial+html, text/html;q=0.9` | verified 2026-10-15 | R4 |
 | hover.user.card | `[data-testid="user-hover-card"]` | verified | R4 |
 | hover.user.cakeDay | `time[data-testid="cake-day"]@datetime` | verified | R4 |

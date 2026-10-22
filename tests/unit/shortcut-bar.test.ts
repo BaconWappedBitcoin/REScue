@@ -45,7 +45,10 @@ describe('shortcut model', () => {
   });
 
   it('migrates rows without a date, keeping their order, and leaves dated rows alone', () => {
-    const { rows, changed } = migrateRows([{ target: 'aa' }, row('bb', '', 5), { target: 'cc' }], 100);
+    const { rows, changed } = migrateRows(
+      [{ target: 'aa' }, row('bb', '', 5), { target: 'cc' }],
+      100,
+    );
     expect(changed).toBe(true);
     expect(rows.map((r) => r.addedAt)).toEqual([100, 5, 101]);
     const again = migrateRows(rows, 999);
@@ -66,10 +69,30 @@ describe('shortcut model', () => {
   });
 
   it('sorts by name either way or by date added, with unusable rows last', () => {
-    const rows = [row('Charlie', '', 3), row('https://x.test', '', 0), row('alpha', '', 9), row('Bravo', 'Zed', 1)];
-    expect(targets(sortRows(rows, 'nameAsc'))).toEqual(['alpha', 'Charlie', 'Bravo', 'https://x.test']);
-    expect(targets(sortRows(rows, 'nameDesc'))).toEqual(['Bravo', 'Charlie', 'alpha', 'https://x.test']);
-    expect(targets(sortRows(rows, 'dateAsc'))).toEqual(['Bravo', 'Charlie', 'alpha', 'https://x.test']);
+    const rows = [
+      row('Charlie', '', 3),
+      row('https://x.test', '', 0),
+      row('alpha', '', 9),
+      row('Bravo', 'Zed', 1),
+    ];
+    expect(targets(sortRows(rows, 'nameAsc'))).toEqual([
+      'alpha',
+      'Charlie',
+      'Bravo',
+      'https://x.test',
+    ]);
+    expect(targets(sortRows(rows, 'nameDesc'))).toEqual([
+      'Bravo',
+      'Charlie',
+      'alpha',
+      'https://x.test',
+    ]);
+    expect(targets(sortRows(rows, 'dateAsc'))).toEqual([
+      'Bravo',
+      'Charlie',
+      'alpha',
+      'https://x.test',
+    ]);
   });
 
   it('finds and removes a subreddit by exact match only', () => {
@@ -98,12 +121,18 @@ describe('shortcut model', () => {
       '/r/mod/about/modqueue/',
       '/user/some%20user/saved/',
     ]);
-    expect(staticLinks({ ...on, showDefaults: false, linkRandom: false }, { signedIn: true, username: null }).map((l) => l.text)).toEqual(['Friends', 'Mod', 'Modqueue']);
+    expect(
+      staticLinks(
+        { ...on, showDefaults: false, linkRandom: false },
+        { signedIn: true, username: null },
+      ).map((l) => l.text),
+    ).toEqual(['Friends', 'Mod', 'Modqueue']);
   });
 });
 
 const BAR = '#rescue-subreddit-bar';
-const q = <T extends Element = HTMLElement>(sel: string) => document.querySelector<T>(`${BAR} ${sel}`);
+const q = <T extends Element = HTMLElement>(sel: string) =>
+  document.querySelector<T>(`${BAR} ${sel}`);
 const qa = (sel: string) => [...document.querySelectorAll<HTMLElement>(`${BAR} ${sel}`)];
 const texts = () => qa('.rescue-sc a').map((a) => a.textContent);
 const popup = () => document.getElementById('rescue-shortcut-popup');
@@ -131,6 +160,7 @@ async function boot(
   const profile = { schemaVersion: 1, keybindings: {}, syncEnabled: false, modules: {} };
   const settings = {
     profile: () => profile,
+    definitions: () => [],
     save: async (p: { modules: Record<string, { options?: { subreddits?: RawRow[] } }> }) => {
       saves.push(p.modules.subredditManager?.options?.subreddits ?? []);
     },
@@ -147,12 +177,21 @@ async function boot(
   return { m, saves, redraw, last: () => saves[saves.length - 1]! };
 }
 
-const submit = () => popup()!.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+const submit = () =>
+  popup()!
+    .querySelector('form')!
+    .dispatchEvent(new Event('submit', { cancelable: true }));
 const fill = (name: string, value: string) => {
   popup()!.querySelector<HTMLInputElement>(`input[name="${name}"]`)!.value = value;
 };
 const fire = (el: Element, type: string, init: KeyboardEventInit = {}) =>
-  el.dispatchEvent(new (type === 'keydown' ? KeyboardEvent : Event)(type, { bubbles: true, cancelable: true, ...init }));
+  el.dispatchEvent(
+    new (type === 'keydown' ? KeyboardEvent : Event)(type, {
+      bubbles: true,
+      cancelable: true,
+      ...init,
+    }),
+  );
 const wrap = (i: number) => q(`.rescue-sc[data-index="${i}"]`)!;
 
 const THREE = [row('aa', '', 1), row('bb', 'Bee', 2), row('cc', '', 3)];
@@ -167,7 +206,11 @@ describe('shortcut bar: edit, add and delete', () => {
     fill('label', 'New');
     submit();
     expect(popup()).toBeNull();
-    expect(t.last()).toEqual([{ target: 'r/newname', label: 'New', addedAt: 1 }, THREE[1], THREE[2]]);
+    expect(t.last()).toEqual([
+      { target: 'r/newname', label: 'New', addedAt: 1 },
+      THREE[1],
+      THREE[2],
+    ]);
     t.redraw(t.last());
     expect(texts()).toEqual(['New', 'Bee', 'cc']);
     t.m.dispose();
@@ -321,7 +364,9 @@ describe('shortcut bar: reorder, sort, groups and the rest', () => {
     expect(menu().hasAttribute('hidden')).toBe(true);
     await new Promise((r) => setTimeout(r, 60));
     expect(menu().hasAttribute('hidden')).toBe(false);
-    expect([...menu().querySelectorAll('a')].map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+    expect(
+      [...menu().querySelectorAll('a')].map((a) => [a.textContent, a.getAttribute('href')]),
+    ).toEqual([
       ['r/pics', '/r/pics/'],
       ['r/aww', '/r/aww/'],
       ['r/cats', '/r/cats/'],
@@ -359,7 +404,14 @@ describe('shortcut bar: reorder, sort, groups and the rest', () => {
   it('shows the optional static links before your own, with Saved from the session name', async () => {
     const t = await boot(
       [row('aa')],
-      { showDefaults: true, linkRandom: true, linkFriends: true, linkMod: true, linkModqueue: true, linkSaved: true },
+      {
+        showDefaults: true,
+        linkRandom: true,
+        linkFriends: true,
+        linkMod: true,
+        linkModqueue: true,
+        linkSaved: true,
+      },
       { username: 'rockpaperblr' },
     );
     const hrefs = qa('.rescue-sc-viewport > a').map((a) => a.getAttribute('href'));
@@ -406,6 +458,7 @@ describe('shortcut bar: dated rows', () => {
     const saves: RawRow[][] = [];
     const settings = {
       profile: () => ({ schemaVersion: 1, keybindings: {}, syncEnabled: false, modules: {} }),
+      definitions: () => [],
       save: async (p: { modules: Record<string, { options?: { subreddits?: RawRow[] } }> }) => {
         saves.push(p.modules.subredditManager!.options!.subreddits!);
       },
@@ -430,14 +483,26 @@ describe('shortcut bar: dated rows', () => {
 });
 
 describe('T147 shortcut bar options', () => {
-  const storeOf = (m: Awaited<ReturnType<typeof boot>>['m']) => m.moduleStore.subredditManager ?? {};
+  const storeOf = (m: Awaited<ReturnType<typeof boot>>['m']) =>
+    m.moduleStore.subredditManager ?? {};
 
   it('lists RandNSFW and the dashboard word only when asked', () => {
-    const base = { showDefaults: false, linkRandom: false, linkFriends: false, linkMod: false, linkModqueue: false, linkSaved: false };
+    const base = {
+      showDefaults: false,
+      linkRandom: false,
+      linkFriends: false,
+      linkMod: false,
+      linkModqueue: false,
+      linkSaved: false,
+    };
     const none = { signedIn: false, username: null };
     expect(staticLinks(base, none)).toEqual([]);
-    expect(staticLinks({ ...base, linkRandNSFW: true }, none)).toEqual([{ text: 'RandNSFW', href: '/r/randnsfw/' }]);
-    expect(staticLinks({ ...base, linkDashboard: true }, none)).toEqual([{ text: 'Dashboard', href: '#rescue:dashboard' }]);
+    expect(staticLinks({ ...base, linkRandNSFW: true }, none)).toEqual([
+      { text: 'RandNSFW', href: '/r/randnsfw/' },
+    ]);
+    expect(staticLinks({ ...base, linkDashboard: true }, none)).toEqual([
+      { text: 'Dashboard', href: '#rescue:dashboard' },
+    ]);
   });
 
   it('sorts by last visited, most recent first, never-visited ones after in their order', () => {
@@ -460,7 +525,11 @@ describe('T147 shortcut bar options', () => {
   });
 
   it('the last visited sort uses what was recorded', async () => {
-    const t = await boot([row('aa'), row('bb'), row('cc')], {}, { stored: { visits: { cc: 30, aa: 20 } } });
+    const t = await boot(
+      [row('aa'), row('bb'), row('cc')],
+      {},
+      { stored: { visits: { cc: 30, aa: 20 } } },
+    );
     q('[data-rescue-sort]')!.click();
     q('[data-sort="visitDesc"]')!.click();
     expect(targets(t.last())).toEqual(['cc', 'aa', 'bb']);
@@ -497,7 +566,11 @@ describe('T147 shortcut bar options', () => {
     const t = await boot(
       [row('bobs')],
       {},
-      { username: 'Alice', raw: true, stored: { accounts: { current: 'bob', lists: { alice: [row('alices')] } } } },
+      {
+        username: 'Alice',
+        raw: true,
+        stored: { accounts: { current: 'bob', lists: { alice: [row('alices')] } } },
+      },
     );
     expect(texts()).toEqual(['alices']);
     const state = storeOf(t.m).accounts as { current: string; lists: Record<string, RawRow[]> };
@@ -507,7 +580,11 @@ describe('T147 shortcut bar options', () => {
   });
 
   it('a new account starts empty, and with per-account lists off the list is shared', async () => {
-    const t = await boot([row('bobs')], {}, { username: 'Cy', raw: true, stored: { accounts: { current: 'bob', lists: {} } } });
+    const t = await boot(
+      [row('bobs')],
+      {},
+      { username: 'Cy', raw: true, stored: { accounts: { current: 'bob', lists: {} } } },
+    );
     expect(texts()).toEqual([]);
     t.m.dispose();
     document.body.innerHTML = '';

@@ -22,7 +22,15 @@ export default defineConfig({
     },
   },
   // The AMO source upload: the project as reviewers need it, without the session notes.
-  zip: { excludeSources: ['docs/handoff.md', 'test-results/**', 'tests/fixtures/captured/**'] },
+  zip: {
+    excludeSources: [
+      'docs/handoff.md',
+      'test-results/**',
+      'tests/fixtures/captured/**',
+      'firefox-output/**',
+      'playwright-report/**',
+    ],
+  },
   manifest: ({ browser }) => ({
     name: 'REScue',
     description: 'Reddit Enhancement Suite features for modern Reddit and sh.reddit.com.',

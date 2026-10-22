@@ -3,6 +3,7 @@
  * onboarding, with contribute and submitIssue folded in).
  */
 import { defaultProfile } from '../../core/settings';
+import { removeStored, STORAGE_KEYS } from '../../core/storage/store';
 import { disableForTab } from '../../core/tabDisable';
 import { defineModule, type ModuleContext } from '../../core/types';
 import { removeTallyOnlyTags, sanitizeTags } from '../users/tagStore';
@@ -70,7 +71,8 @@ export const troubleshooter = defineModule({
       confirm:
         'Clear read history, collapsed comments and auto-hidden posts? Tags, filters and settings are kept.',
       async run(ctx) {
-        await browser.storage.local.remove(['read', 'collapsed', 'hiddenPosts']);
+        // Through the store: a debounced write still pending would otherwise bring the data back.
+        await removeStored([STORAGE_KEYS.read, STORAGE_KEYS.collapsed, STORAGE_KEYS.hiddenPosts]);
         ctx.notices.show('REScue: read history cleared.');
       },
     },

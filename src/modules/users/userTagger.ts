@@ -22,6 +22,7 @@ import { setOption } from '../../core/settings';
 import { defineModule, type ModuleContext } from '../../core/types';
 import { blockedImportAction, runImportBlocked } from './blockedImport';
 import { ignoreButton } from './ignoreButton';
+import { pageBackground } from './pageBackground';
 import { buildTagChip } from './tagChip';
 import { taggerOptionsSchema } from './taggerOptions';
 import { STYLE, STYLE_ID } from './taggerStyle';
@@ -39,7 +40,6 @@ import {
   setTag,
   setVotes,
   tagKey,
-  validColor,
   voteWeightColor,
   type UserTag,
   type UserTags,
@@ -67,6 +67,8 @@ interface State {
   hiddenByUs: Set<string>;
   /** Ignored comments the reader chose to show. */
   expanded: Set<string>;
+  /** Comments whose body this module collapsed (so only those are ever opened again). */
+  collapsedByUs: Set<string>;
   /** Post elements -> their id and author, for counting clicks on Reddit's own arrows. */
   /** Post and comment elements, for the vote counter. */
   votable: WeakMap<Element, VotedItem>;
@@ -112,22 +114,12 @@ function applyIgnore(s: State, item: Seen): void {
   } else if (item.kind === 'comment') {
     const collapse =
       ignored && options.collapseIgnoredComments === true && !s.expanded.has(item.id);
-    ui.collapseBody(item, collapse);
+    // Only a comment this module collapsed is opened again (most comments never were).
+    if (collapse) {
+      s.collapsedByUs.add(item.id);
+      ui.collapseBody(item, true);
+    } else if (s.collapsedByUs.delete(item.id)) ui.collapseBody(item, false);
   }
-}
-
-/** The first opaque background up the tree, as #rrggbb; the theme background when there is none. */
-function pageBackground(from: Element): string {
-  const hex = (n: string): string => Number(n).toString(16).padStart(2, '0');
-  for (let el: Element | null = from; el; el = el.parentElement) {
-    const m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/.exec(
-      getComputedStyle(el).backgroundColor,
-    );
-    if (m && (m[4] === undefined || Number(m[4]) >= 0.99))
-      return `#${hex(m[1]!)}${hex(m[2]!)}${hex(m[3]!)}`;
-  }
-  const theme = getComputedStyle(document.documentElement).getPropertyValue('--rescue-bg').trim();
-  return validColor(theme) ?? '#ffffff';
 }
 
 function votePill(s: State, item: Seen, tag: UserTag): HTMLElement {
@@ -217,8 +209,10 @@ function fill(s: State, item: Seen): void {
   if (showIgnoreButton) {
     const ignored = isIgnored(s, item);
     kids.push(
-      ignoreButton(author, ignored, () =>
-        void mutate(s, author, (t, now) => setIgnored(t, author, !isIgnored(s, item), now)),
+      ignoreButton(
+        author,
+        ignored,
+        () => void mutate(s, author, (t, now) => setIgnored(t, author, !isIgnored(s, item), now)),
       ),
     );
   }
@@ -373,6 +367,18 @@ function reset(s: State): void {
   s.ids.clear();
   s.hiddenByUs.clear();
   s.expanded.clear();
+  s.collapsedByUs.clear();
+}
+
+/** Switched off live: show what this module hid or collapsed, and take its tag chips away. */
+function withdraw(s: State): void {
+  const { ui } = s.ctx;
+  for (const id of s.hiddenByUs) ui.unhide({ id }, IGNORE_REASON);
+  for (const items of s.seen.values())
+    for (const item of items)
+      if (item.kind === 'comment' && isIgnored(s, item)) ui.collapseBody(item, false);
+  ui.removeDecorations('rescue-author-extras');
+  reset(s);
 }
 
 function makeState(ctx: ModuleContext, tags: UserTags): State {
@@ -382,6 +388,7 @@ function makeState(ctx: ModuleContext, tags: UserTags): State {
     seen: new Map(),
     ids: new Set(),
     hiddenByUs: new Set(),
+    collapsedByUs: new Set(),
     expanded: new Set(),
     votable: new WeakMap(),
     stopCounting: null,
@@ -466,6 +473,7 @@ export const userTagger = defineModule({
   },
 
   dispose() {
+    if (state) withdraw(state);
     state?.stopCounting?.();
     closeTagEditor();
     closeTagManager();

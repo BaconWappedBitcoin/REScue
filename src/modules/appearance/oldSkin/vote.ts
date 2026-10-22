@@ -15,7 +15,7 @@ import { C } from '../../../contracts/reddit';
 import { h } from '../../../core/dom';
 import { compactScore } from '../../../model/oldSkinText';
 import { ownActionRow } from '../../../model/commentRow';
-import { failureText, onActivate, say, setAttr, setText, type Ctx } from './shared';
+import { failureText, say, setAttr, setText, type Ctx } from './shared';
 
 export type Kind = 'post' | 'comment';
 export type VoteDir = -1 | 0 | 1;
@@ -27,7 +27,11 @@ export function voteRoot(host: Element, kind: Kind): ShadowRoot | null {
 
 /** The reader's vote as Reddit's own buttons show it; null when they are not readable. */
 export function nativeVote(host: Element, kind: Kind): VoteDir | null {
-  const root = voteRoot(host, kind);
+  return voteIn(voteRoot(host, kind));
+}
+
+/** The vote Reddit's buttons in this shadow root show; null when they are not readable. */
+function voteIn(root: ShadowRoot | null): VoteDir | null {
   const up = root?.querySelector(C.native.upvote);
   const down = root?.querySelector(C.native.downvote);
   if (!up || !down) return null;
@@ -44,6 +48,47 @@ export interface VoteBoxOptions {
   ctx: Ctx;
   /** The item's score as the page knows it, or null (a hidden or unknown score). */
   readScore(): number | null;
+  /** The shadow root with Reddit's vote buttons, when the caller keeps it (default: voteRoot). */
+  root?(): ShadowRoot | null;
+}
+
+/**
+ * Every vote box follows Reddit's buttons through ONE observer (a big thread has thousands of
+ * boxes): each box's shadow root is observed on it, and a change goes to the boxes of that root.
+ */
+const following = new Map<Node, Set<VoteBox>>();
+let follower: MutationObserver | null = null;
+
+function onVoteChanges(records: MutationRecord[]): void {
+  const roots = new Set<Node>();
+  for (const r of records) roots.add(r.target.getRootNode());
+  for (const root of roots) for (const box of [...(following.get(root) ?? [])]) box.update();
+}
+
+function follow(root: ShadowRoot, box: VoteBox): void {
+  let boxes = following.get(root);
+  if (!boxes) {
+    following.set(root, (boxes = new Set()));
+    follower ??= new MutationObserver(onVoteChanges);
+    follower.observe(root, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: [C.native.voteState],
+    });
+  }
+  boxes.add(box);
+}
+
+/** An observer cannot stop watching one node: a root nobody follows is ignored, and with no box left the observer goes. */
+function unfollow(root: ShadowRoot, box: VoteBox): void {
+  const boxes = following.get(root);
+  if (!boxes) return;
+  boxes.delete(box);
+  if (boxes.size) return;
+  following.delete(root);
+  if (following.size) return;
+  follower?.disconnect();
+  follower = null;
 }
 
 export class VoteBox {
@@ -56,7 +101,9 @@ export class VoteBox {
   /** The number on show (the score moved by the reader's own vote), or null when none is known. */
   shown: number | null = null;
   private watched: ShadowRoot | null = null;
-  private observer: MutationObserver | null = null;
+  /** A click made while a vote was in flight, run once that one is settled (the last one wins). */
+  private queued: 1 | -1 | null = null;
+  private disposed = false;
 
   constructor(private readonly o: VoteBoxOptions) {
     const arrow = (cls: string, label: string): HTMLButtonElement =>
@@ -78,33 +125,39 @@ export class VoteBox {
       this.num,
       this.down,
     );
-    onActivate(this.up, () => void this.cast(1));
-    onActivate(this.down, () => void this.cast(-1));
-    this.el.addEventListener('click', (e) => e.stopPropagation());
+    // One listener for the column: no click on it reaches Reddit's card; a plain click on an arrow votes.
+    this.el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+      const t = e.target instanceof Node ? e.target : null;
+      if (t && this.up.contains(t)) void this.cast(1);
+      else if (t && this.down.contains(t)) void this.cast(-1);
+    });
     this.update();
   }
 
+  private root(): ShadowRoot | null {
+    return this.o.root ? this.o.root() : voteRoot(this.o.host, this.o.kind);
+  }
+
   /** Follow Reddit's own buttons (a key press or Reddit's own click changes them too). */
-  private watch(): void {
-    const root = voteRoot(this.o.host, this.o.kind);
+  private watch(root: ShadowRoot | null): void {
     if (root === this.watched) return;
-    this.observer?.disconnect();
+    if (this.watched) unfollow(this.watched, this);
     this.watched = root;
-    if (!root) return;
-    this.observer ??= new MutationObserver(() => this.update());
-    this.observer.observe(root, {
-      subtree: true,
-      attributes: true,
-      attributeFilter: [C.native.voteState],
-    });
+    if (root) follow(root, this);
   }
 
   /** Redraw from Reddit's state. Cheap; called on every relevant change. */
   update(): void {
-    this.watch();
-    const vote = nativeVote(this.o.host, this.o.kind);
+    const root = this.root();
+    this.watch(root);
+    const vote = voteIn(root);
     const score = this.o.readScore();
-    if ((this.baseScore === undefined || score !== this.baseScore) && (score === null || vote !== null)) {
+    if (
+      (this.baseScore === undefined || score !== this.baseScore) &&
+      (score === null || vote !== null)
+    ) {
       // The number was (re)read from the page: it is true for the vote the buttons show now. (While
       // the buttons are not readable yet the number is shown as it is and the base waits for them.)
       this.baseScore = score;
@@ -112,15 +165,29 @@ export class VoteBox {
     }
     const shown = (this.shown = score === null ? null : score + ((vote ?? 0) - this.baseVote));
     setText(this.num, shown === null ? '•' : compactScore(shown));
-    setAttr(this.num, 'title', shown === null ? 'score hidden or not loaded yet' : `${shown} points`);
+    setAttr(
+      this.num,
+      'title',
+      shown === null ? 'score hidden or not loaded yet' : `${shown} points`,
+    );
     setAttr(this.el, 'data-vote', vote === 1 ? 'up' : vote === -1 ? 'down' : 'none');
     setAttr(this.up, 'aria-pressed', String(vote === 1));
     setAttr(this.down, 'aria-pressed', String(vote === -1));
   }
 
+  /**
+   * Cast a vote. Reddit's buttons flip within ~60 ms but the vote counts as confirmed only at the
+   * next read-back (150 ms on), so a second click in between found the column busy and was dropped
+   * without a word (the arrows already showed the new state). It now waits its turn: the last
+   * click made while busy runs once the vote before it is settled, against the state then shown.
+   */
   private async cast(dir: 1 | -1): Promise<void> {
-    if (this.el.getAttribute('aria-busy') === 'true') return;
-    const now = nativeVote(this.o.host, this.o.kind);
+    if (this.disposed) return;
+    if (this.el.getAttribute('aria-busy') === 'true') {
+      this.queued = dir;
+      return;
+    }
+    const now = voteIn(this.root());
     const want: VoteDir = now === dir ? 0 : dir;
     setAttr(this.el, 'aria-busy', 'true');
     try {
@@ -129,12 +196,16 @@ export class VoteBox {
     } finally {
       setAttr(this.el, 'aria-busy', null);
       this.update();
+      const next = this.queued;
+      this.queued = null;
+      if (next) void this.cast(next);
     }
   }
 
   dispose(): void {
-    this.observer?.disconnect();
-    this.observer = null;
+    this.disposed = true;
+    this.queued = null;
+    this.watch(null);
     this.el.remove();
   }
 }

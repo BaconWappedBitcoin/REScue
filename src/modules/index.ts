@@ -26,11 +26,13 @@ import { showKarma } from './users/showKarma';
 import { commentHidePersistor } from './comments/commentHidePersistor';
 import { commentNavigator } from './comments/commentNavigator';
 import { commentSortBy } from './comments/commentSortBy';
+import { commentTools } from './comments/commentTools';
 import { hideChildComments } from './comments/hideChildComments';
 import { newCommentCount } from './comments/newCommentCount';
 import { readComments } from './comments/readComments';
 import { saveComments } from './comments/saveComments';
 import { showParent } from './comments/showParent';
+import { showSource } from './comments/showSource';
 import { tableTools } from './comments/tableTools';
 import { threadSubscriptions } from './comments/threadSubscriptions';
 import { autoHide } from './listings/autoHide';
@@ -56,6 +58,7 @@ import { profileNavigator } from './appearance/profileNavigator';
 import { redditUserInfo } from './users/redditUserInfo';
 import { localDate } from './appearance/localDate';
 import { logoLink } from './appearance/logoLink';
+import { nightMode } from './appearance/nightMode';
 import { oldRedditSkin } from './appearance/oldRedditSkin';
 import { pageNavigator } from './appearance/pageNavigator';
 import { searchHelper } from './appearance/searchHelper';
@@ -103,8 +106,10 @@ export const MODULES: ModuleDefinition[] = [
   commentStyle,
   showKarma,
   commentSortBy,
+  commentTools,
   tableTools,
   linksNewTab,
+  showSource,
   autoHide,
   subredditTagger,
   // After the tag, so its "show image" word follows it in the credit bar.
@@ -114,6 +119,7 @@ export const MODULES: ModuleDefinition[] = [
   // US8 appearance.
   customCss,
   localDate,
+  nightMode,
   usernameHider,
   subredditManager,
   pageNavigator,

@@ -1,5 +1,5 @@
 /** Tiny DOM builder, escaping, body-HTML sanitizer, and formatting helpers. */
-import { stamp } from './instance';
+import { OWNER_ATTR, stamp } from './instance';
 
 type Child = Node | string | number | null | undefined | false;
 type Attrs = Record<string, string | number | boolean | null | undefined | EventListener>;
@@ -88,18 +88,31 @@ const ALLOWED_ATTRS = new Set([
   'width',
   'height',
 ]);
-const SAFE_URL = /^(https?:|\/(?!\/)|#|mailto:)/i;
+/** A path on this site (never `//host` or `/\host`, which browsers read as another host). */
+const SAFE_URL = /^(https?:|\/(?![/\\])|#|mailto:)/i;
+
+/** Browsers drop tabs and newlines inside an address, so they are dropped before checking too. */
+const safeUrl = (value: string): boolean => SAFE_URL.test(value.replace(/[\t\n\r]/g, '').trim());
+
+let inertDoc: Document | null = null;
+/**
+ * The copies are built in a document that is not shown and runs nothing: an <img> made there
+ * never loads its picture (one made with the page's own document starts loading at once).
+ */
+const inert = (): Document => (inertDoc ??= document.implementation.createHTMLDocument(''));
 
 /**
  * Allowlist sanitizer for user-authored bodies copied out of Reddit's DOM. Unknown elements are
- * unwrapped (children kept); script-like elements are dropped with their content.
+ * unwrapped (children kept); script-like elements are dropped with their content. The fragment
+ * belongs to an inert document; appending it to the page adopts it.
  */
 export function sanitizeNode(src: Node): DocumentFragment {
-  const out = document.createDocumentFragment();
+  const doc = inert();
+  const out = doc.createDocumentFragment();
   const walk = (node: Node, parent: Node) => {
     for (const child of [...node.childNodes]) {
       if (child.nodeType === Node.TEXT_NODE) {
-        parent.appendChild(document.createTextNode(child.textContent ?? ''));
+        parent.appendChild(doc.createTextNode(child.textContent ?? ''));
         continue;
       }
       if (child.nodeType !== Node.ELEMENT_NODE) continue;
@@ -116,11 +129,11 @@ export function sanitizeNode(src: Node): DocumentFragment {
         walk(el, parent);
         continue;
       }
-      const copy = document.createElement(tag);
+      const copy = doc.createElement(tag);
       for (const attr of [...el.attributes]) {
         const name = attr.name.toLowerCase();
         if (!ALLOWED_ATTRS.has(name)) continue;
-        if ((name === 'href' || name === 'src') && !SAFE_URL.test(attr.value.trim())) continue;
+        if ((name === 'href' || name === 'src') && !safeUrl(attr.value)) continue;
         copy.setAttribute(name, attr.value);
       }
       if (tag === 'a') copy.setAttribute('rel', 'noopener noreferrer nofollow');
@@ -133,9 +146,9 @@ export function sanitizeNode(src: Node): DocumentFragment {
 }
 
 export function sanitizeHtml(html: string): string {
-  const tpl = document.createElement('template');
+  const tpl = inert().createElement('template');
   tpl.innerHTML = html;
-  const wrap = document.createElement('div');
+  const wrap = inert().createElement('div');
   wrap.appendChild(sanitizeNode(tpl.content));
   return wrap.innerHTML;
 }
@@ -143,7 +156,7 @@ export function sanitizeHtml(html: string): string {
 /** Sanitized innerHTML of an element (empty string for null). */
 export const sanitizedInner = (el: Element | null): string => {
   if (!el) return '';
-  const wrap = document.createElement('div');
+  const wrap = inert().createElement('div');
   wrap.appendChild(sanitizeNode(el));
   return wrap.innerHTML;
 };
@@ -190,7 +203,68 @@ export const parseDate = (v: string | null | undefined): Date | null => {
   return Number.isNaN(d.getTime()) ? null : d;
 };
 
-/** Closest-owner scoping: query within `root` but only nodes whose nearest `ownerSel` is `root`. */
+/**
+ * Closest-owner scoping: query within `root` but only nodes whose nearest `ownerSel` is `root`.
+ * With no nested owner (a comment without replies) this is one query. Otherwise the walk stops at
+ * each nested owner instead of listing (and then discarding) everything inside the replies: a top
+ * comment of a long thread holds thousands of them.
+ */
 export function ownQueryAll(root: Element, sel: string, ownerSel: string): Element[] {
-  return [...root.querySelectorAll(sel)].filter((n) => n.closest(ownerSel) === root);
+  if (!root.matches(ownerSel)) {
+    return [...root.querySelectorAll(sel)].filter((n) => n.closest(ownerSel) === root);
+  }
+  if (!root.querySelector(ownerSel)) return [...root.querySelectorAll(sel)];
+  const out: Element[] = [];
+  const visit = (parent: Element): void => {
+    for (let el = parent.firstElementChild; el; el = el.nextElementSibling) {
+      if (el.matches(ownerSel)) continue; // a nested item and everything in it belongs to it
+      if (el.matches(sel)) out.push(el);
+      if (el.firstElementChild) visit(el);
+    }
+  };
+  visit(root);
+  return out;
+}
+
+/**
+ * An element that is not one of REScue's own (stamped by core/instance). REScue's controls never
+ * hold Reddit's elements, and they are most of what a decorated batch adds.
+ */
+const foreign = (n: Node): n is Element => n instanceof Element && !n.hasAttribute(OWNER_ATTR);
+
+/**
+ * The elements matching `sel` that a burst of mutations added (an added element itself, or inside
+ * it), in record order. Observers use it to look only at what arrived instead of querying the
+ * whole document after every burst.
+ */
+export function addedMatching(records: readonly MutationRecord[], sel: string): Element[] {
+  const out: Element[] = [];
+  for (const r of records) {
+    for (const n of r.addedNodes) {
+      if (!foreign(n)) continue;
+      if (n.matches(sel)) out.push(n);
+      out.push(...n.querySelectorAll(sel));
+    }
+  }
+  return out;
+}
+
+/** Did a burst add, or remove, an element matching `sel` (itself or inside an added/removed one)? */
+export function burstTouches(records: readonly MutationRecord[], sel: string): boolean {
+  for (const r of records) {
+    for (const list of [r.addedNodes, r.removedNodes]) {
+      for (const n of list) {
+        if (foreign(n) && (n.matches(sel) || n.querySelector(sel))) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/** The first of ownQueryAll(root, sel, ownerSel) without listing the rest, or null. */
+export function ownQueryFirst(root: Element, sel: string, ownerSel: string): Element | null {
+  // Document order puts an item's own parts before its replies: the first match usually answers.
+  const first = root.querySelector(sel);
+  if (!first || first.closest(ownerSel) === root) return first;
+  return ownQueryAll(root, sel, ownerSel)[0] ?? null;
 }

@@ -74,6 +74,7 @@ const NAV_CSS = [
 ].join('');
 
 let state: State | null = null;
+let unregisterKeys: Array<() => void> = []; // removed in dispose, so off/on can add them again
 
 const isCategory = (v: string): v is NavCategory => NAV_CATEGORIES.some((c) => c.value === v);
 const onThread = (s: State): boolean => s.ctx.route.kind === 'thread';
@@ -246,30 +247,32 @@ function scheduleRender(s: State): void {
 
 function registerKeys(s: State, ctx: ModuleContext): void {
   const thread = (): boolean => state === s && onThread(s);
-  ctx.keys.register({
-    id: 'toggleCommentNavigator',
-    title: 'Show or hide the comment navigator',
-    defaultKeys: ['shift+n'],
-    context: 'comments',
-    enabled: thread,
-    run: () => showWidget(s, !s.open),
-  });
-  ctx.keys.register({
-    id: 'commentNavigatorUp',
-    title: 'Comment navigator: previous match',
-    defaultKeys: ['shift+arrowup'],
-    context: 'comments',
-    enabled: thread,
-    run: () => keyboardStep(s, -1),
-  });
-  ctx.keys.register({
-    id: 'commentNavigatorDown',
-    title: 'Comment navigator: next match',
-    defaultKeys: ['shift+arrowdown'],
-    context: 'comments',
-    enabled: thread,
-    run: () => keyboardStep(s, 1),
-  });
+  unregisterKeys = [
+    ctx.keys.register({
+      id: 'toggleCommentNavigator',
+      title: 'Show or hide the comment navigator',
+      defaultKeys: ['shift+n'],
+      context: 'comments',
+      enabled: thread,
+      run: () => showWidget(s, !s.open),
+    }),
+    ctx.keys.register({
+      id: 'commentNavigatorUp',
+      title: 'Comment navigator: previous match',
+      defaultKeys: ['shift+arrowup'],
+      context: 'comments',
+      enabled: thread,
+      run: () => keyboardStep(s, -1),
+    }),
+    ctx.keys.register({
+      id: 'commentNavigatorDown',
+      title: 'Comment navigator: next match',
+      defaultKeys: ['shift+arrowdown'],
+      context: 'comments',
+      enabled: thread,
+      run: () => keyboardStep(s, 1),
+    }),
+  ];
 }
 
 export const commentNavigator = defineModule({
@@ -482,6 +485,7 @@ export const commentNavigator = defineModule({
   },
 
   dispose() {
+    for (const off of unregisterKeys.splice(0)) off();
     if (state?.timer) clearTimeout(state.timer);
     state?.stopSelection();
     state?.stopCommands();

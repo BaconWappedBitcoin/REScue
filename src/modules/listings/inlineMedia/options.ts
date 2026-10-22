@@ -68,6 +68,13 @@ export const OPTIONS = {
     description:
       'A post whose media you showed stays shown when you see it again. Kept on this device only and forgotten after 90 days.',
   },
+  scrollOnGalleryNavigate: {
+    type: 'boolean',
+    default: true,
+    title: 'Scroll to the gallery when stepping through it',
+    description:
+      'When [ or ] shows another picture of the selected post’s gallery, scroll the page so the gallery is on screen. The keys step Reddit’s own slideshow, so only the scroll is REScue’s.',
+  },
   blockDownloads: {
     type: 'boolean',
     default: false,

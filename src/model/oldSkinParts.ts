@@ -68,5 +68,9 @@ export function partsCss(): string {
     // Reddit's own bullet and relative time in the head are replaced by REScue's "2 hours ago".
     `${meta} ${k.timeBullet}, ${meta} ${k.timeLink} { display: none !important; }`,
     `${meta} ${k.timeago} { display: none; }`,
+    // Old Reddit's edited "*" after the age (its title says when), or "(last edited …)" as text.
+    `${meta} .rescue-oedited { color: var(--os-meta); cursor: help; }`,
+    // showSource's tagline chip (class SOURCE_CHIP_CLASS): the skin's link row has its own "source".
+    `${R} :is(${C.post}, ${C.comment})[${k.mountAttr}] .rescue-source { display: none !important; }`,
   ].join('\n');
 }

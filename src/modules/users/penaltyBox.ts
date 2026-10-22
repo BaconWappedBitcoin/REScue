@@ -4,6 +4,7 @@
  * by itself. Features start reporting penalties as they arrive (hover cards in US5, etc.).
  */
 import { hint } from '../../core/hints';
+import { saveOrNotify, setModuleEnabled } from '../../core/settings';
 import { defineModule, type ModuleContext } from '../../core/types';
 
 const THRESHOLD = 10;
@@ -26,16 +27,7 @@ export async function penalize(moduleId: string, amount = 1): Promise<void> {
         {
           label: 'Turn off',
           hint: hint.turnOff,
-          run: () => {
-            const p = ctx.settings.profile();
-            void ctx.settings.save({
-              ...p,
-              modules: {
-                ...p.modules,
-                [moduleId]: { ...(p.modules[moduleId] ?? {}), enabled: false },
-              },
-            });
-          },
+          run: () => void saveOrNotify(ctx, setModuleEnabled(ctx.settings.profile(), def, false)),
         },
         {
           label: 'Keep it',

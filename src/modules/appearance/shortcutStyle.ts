@@ -23,6 +23,10 @@ export const STYLE = [
   `${B} .rescue-sc-viewport{display:flex;align-items:center;gap:2px;overflow-x:auto;`,
   'min-width:0;scrollbar-width:none;scroll-behavior:smooth}',
   `${B} .rescue-sc-viewport::-webkit-scrollbar{display:none}`,
+  // Only the list of shortcuts shrinks (and scrolls with its arrows); the words after it keep their
+  // width, or at a narrow window they were squeezed on top of each other (live 2026-10-21, 420 px).
+  `${B}>*:not(.rescue-sc-viewport){flex:none}`,
+  `${B} .rescue-sc-viewport{flex:1 1 auto}`,
   `${B} .rescue-sc-viewport>*{flex:none}`,
   `${B} .rescue-sc-arrow{padding:0 2px}`,
   `${B} .rescue-sc{display:inline-flex;align-items:center;border-radius:3px}`,

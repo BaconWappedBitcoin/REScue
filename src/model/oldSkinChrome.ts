@@ -24,8 +24,10 @@ export function chromeCss(): string {
     // it, a plain narrow search box at the right and the account buttons in a light rounded box.
     `${R} ${k.headerLogo} svg { height: 18px; width: auto; }`,
     `${R} ${k.headerLogo} svg path { fill: var(--os-fg) !important; }`,
-    `${R} .rescue-opagename { margin-left: 8px; color: var(--os-fg); font: small-caps bold 14.4px var(--os-font); text-decoration: none; }`,
+    // One line, cut with "…" when long; on a narrow window (no room beside Reddit's menu button) none.
+    `${R} .rescue-opagename { display: inline-block; vertical-align: middle; flex: 0 1 auto; min-width: 0; max-width: 240px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-left: 8px; color: var(--os-fg); font: small-caps bold 14.4px var(--os-font); text-decoration: none; }`,
     `${R} .rescue-opagename:hover { text-decoration: underline; }`,
+    `@media (max-width: 599px) { ${R} .rescue-opagename { display: none; } }`,
     `${R} ${k.headerSearch} { flex: 0 1 320px !important; margin-left: auto; }`,
     `${R} ${k.headerSearch} > div, ${R} ${k.headerSearch} > div > div { position: static !important; width: 100% !important; margin: 0 !important; }`,
     `${R} ${k.headerActions} { margin-left: 8px; padding: 0 6px; height: 34px; align-self: center; background: color-mix(in srgb, var(--os-bg) 70%, var(--os-head)); border-radius: 7px; }`,

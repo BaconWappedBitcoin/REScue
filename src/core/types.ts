@@ -149,7 +149,8 @@ export interface ModuleUi extends LayoutHooks {
 
 /** Keyboard commands (src/core/keys.ts). */
 export interface KeysApi {
-  register(cmd: Command): void;
+  /** Returns a function that removes the command again (for dispose). */
+  register(cmd: Command): () => void;
   list(): Array<{
     id: string;
     title: string;

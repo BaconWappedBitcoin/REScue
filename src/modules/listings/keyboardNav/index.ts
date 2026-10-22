@@ -22,6 +22,8 @@ import { LinkNumberOverlay, numberedLinks } from './linkNumbers';
 let route: Route | null = null;
 let cur: ModuleContext | null = null;
 let stops: Array<() => void> = [];
+/** Removes the registered commands (dispose), so switching the module back on can add them again. */
+let unregister: Array<() => void> = [];
 let onLoadDone = false;
 const overlay = new LinkNumberOverlay();
 
@@ -43,7 +45,10 @@ const SCROLL_STYLES = [
   { value: 'top', label: 'Lock to top (selected item at the top of the page)' },
   { value: 'middle', label: 'In the middle of the page' },
   { value: 'page', label: 'Page by page (scroll only when the item is off screen)' },
-  { value: 'legacy', label: 'Legacy (scroll only when the item is not fully on screen, item to the top)' },
+  {
+    value: 'legacy',
+    label: 'Legacy (scroll only when the item is not fully on screen, item to the top)',
+  },
   { value: 'adopt', label: 'Adopt (the item takes the place on screen of the one before it)' },
 ];
 
@@ -74,7 +79,8 @@ const options: OptionSchema = {
     type: 'enum',
     values: JUMP_STYLES,
     default: 'same',
-    title: 'How the page scrolls for jumps (next/previous sibling or thread, parent, top, first/last, undo)',
+    title:
+      'How the page scrolls for jumps (next/previous sibling or thread, parent, top, first/last, undo)',
     description:
       'RES scrolls these jumps in their own style (its default was Legacy). “Same as above” keeps one style for every move.',
   },
@@ -279,7 +285,7 @@ export const keyboardNav = defineModule({
       helpOpen,
       closeHelp,
     });
-    for (const c of commands) ctx.keys.register(c);
+    unregister = commands.map((c) => ctx.keys.register(c));
     wire(ctx);
   },
   onSettings(ctx) {
@@ -302,6 +308,8 @@ export const keyboardNav = defineModule({
   dispose() {
     for (const stop of stops) stop();
     stops = [];
+    for (const off of unregister) off();
+    unregister = [];
     overlay.hide();
     closeHelp();
   },

@@ -51,8 +51,13 @@ export const headerButton = defineModule({
     );
     btn.addEventListener('click', () => ctx.ui.openMenu(btn));
 
+    /** Where the button was last put (null: not in place). */
+    let placedBefore: Element | null = null;
+    let placedStrip: Element | null = null;
     const sync = (): void => {
       const anchor = headerAnchor();
+      placedBefore = anchor?.before ?? null;
+      placedStrip = anchor?.strip ?? null;
       if (!anchor) {
         btn.remove();
         document.documentElement.removeAttribute(HEADER_ATTR);
@@ -64,11 +69,22 @@ export const headerButton = defineModule({
       document.documentElement.setAttribute(HEADER_ATTR, '');
     };
     sync();
+    /**
+     * Still right before the element it was put before, and nothing changed in that part of the
+     * header: a burst elsewhere on the page (a thread loading its comments) is no news.
+     */
+    const unaffected = (records: readonly MutationRecord[]): boolean =>
+      !!placedBefore &&
+      !!placedStrip &&
+      btn.isConnected &&
+      placedBefore.isConnected &&
+      btn.nextElementSibling === placedBefore &&
+      !records.some((r) => placedStrip!.contains(r.target));
 
     // Reddit re-renders its header; a cheap check after a burst of changes keeps the button honest.
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const mo = new MutationObserver(() => {
-      if (timer) return;
+    const mo = new MutationObserver((records) => {
+      if (timer || unaffected(records)) return;
       timer = setTimeout(() => {
         timer = null;
         sync();

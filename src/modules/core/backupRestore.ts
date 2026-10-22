@@ -3,15 +3,18 @@ import { defineModule, type ModuleContext } from '../../core/types';
 
 const stamp = (d = new Date()) => d.toISOString().slice(0, 10).replace(/-/g, '');
 
-function download(name: string, json: string) {
+/**
+ * Save `json` as a file. The link is never put into Reddit's page, where the page's own scripts
+ * could find the `blob:` address and read the backup; a detached link downloads just the same.
+ * The address is revoked as soon as the click has started the download.
+ */
+export function downloadFile(name: string, json: string): void {
   const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
   a.download = name;
-  document.body.appendChild(a);
   a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 let stop: (() => void) | null = null;
@@ -108,7 +111,7 @@ export const backupRestore = defineModule({
         })) as { ok: boolean; file?: unknown };
         if (!res?.ok || !res.file)
           return ctx.notices.show('REScue: the backup could not be created.', { kind: 'error' });
-        download(`rescue-backup-${stamp()}.json`, JSON.stringify(res.file, null, 2));
+        downloadFile(`rescue-backup-${stamp()}.json`, JSON.stringify(res.file, null, 2));
       },
     },
     {

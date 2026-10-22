@@ -15,7 +15,8 @@
  */
 import { h } from '../../core/dom';
 import { hint } from '../../core/hints';
-import { defineModule } from '../../core/types';
+import { moduleOn, resolveOptions } from '../../core/settings';
+import { defineModule, type ModuleContext } from '../../core/types';
 import { ownTimeElement, timeElementDate } from '../../model/appearance';
 
 type Format = 'locale' | 'iso';
@@ -86,6 +87,13 @@ export const localDate = defineModule({
         { value: 'iso', label: 'YYYY-MM-DD HH:MM:SS' },
       ],
     },
+    showLastEditedTimestamp: {
+      type: 'boolean',
+      default: true,
+      title: 'Show when a comment was last edited',
+      description:
+        'In the Old Reddit look, an edited comment always gets old Reddit’s “*” after its age (point at it for when it was edited). With this on, it says “(last edited 5 days ago)” instead. Reddit’s normal layout already shows “Edited” by itself.',
+    },
   },
 
   onItems(batch, ctx) {
@@ -122,3 +130,12 @@ export const localDate = defineModule({
 
   dispose: restore,
 });
+
+/**
+ * RES betteReddit's showLastEditedTimestamp, for the Old Reddit look (oldSkin/comment.ts): true
+ * while this module is on and the option is on. Read from the profile, so it follows the settings.
+ */
+export function showLastEdited(ctx: ModuleContext): boolean {
+  if (!moduleOn(ctx.settings, localDate.id)) return false;
+  return resolveOptions(localDate, ctx.settings.profile()).showLastEditedTimestamp === true;
+}

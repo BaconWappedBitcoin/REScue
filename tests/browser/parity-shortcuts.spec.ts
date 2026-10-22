@@ -227,7 +227,9 @@ test('rows saved before there were dates get one, and stay in order', async () =
 
 test('a group link lists its subreddits when hovered', async () => {
   const page = await open(dated('pics+aww+cats'));
-  const menu = bar(page).locator('.rescue-sc-menu[role="menu"]:not([data-rescue-sort-menu])');
+  const menu = bar(page).locator(
+    '.rescue-sc-menu[role="menu"]:not([data-rescue-sort-menu]):not([data-rescue-mail-menu]):not([data-rescue-feeds-menu]):not([data-rescue-feed-sections])',
+  );
   await expect(menu).toBeHidden();
   await links(page).first().hover();
   await expect(menu.locator('a')).toHaveText(['r/pics', 'r/aww', 'r/cats']);
@@ -327,7 +329,9 @@ test('at 820px wide the bar and its menus stay inside the viewport, and a drag t
     .locator('.rescue-sc-viewport')
     .evaluate((el) => (el.scrollLeft = el.scrollWidth));
   await links(page).last().hover();
-  const menu = bar(page).locator('.rescue-sc-menu[role="menu"]:not([data-rescue-sort-menu])');
+  const menu = bar(page).locator(
+    '.rescue-sc-menu[role="menu"]:not([data-rescue-sort-menu]):not([data-rescue-mail-menu]):not([data-rescue-feeds-menu]):not([data-rescue-feed-sections])',
+  );
   await expect(menu).toBeVisible();
   await inside(menu);
   await inside(bar(page));

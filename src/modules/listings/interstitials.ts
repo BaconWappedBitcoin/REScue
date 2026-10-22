@@ -16,6 +16,72 @@ async function confirmAge(ctx: ModuleContext): Promise<void> {
     );
 }
 
+let cur: ModuleContext | null = null;
+let ageHandled = false;
+let mo: MutationObserver | null = null;
+let timer: ReturnType<typeof setTimeout> | null = null;
+let pending: ReturnType<typeof setTimeout> | null = null;
+/** Looks at the page at most this often while it is busy (a thread loading thousands of comments). */
+const SCAN_MS = 100;
+
+/** Nothing left to look for: the age gate was answered and login walls are left alone. */
+const done = (): boolean => ageHandled && cur?.options.removeLoginWall !== true;
+
+/** After a burst of page changes, look once (the page is queried, not each change). */
+function soon(): void {
+  if (pending) return;
+  pending = setTimeout(() => {
+    pending = null;
+    scan();
+    if (done()) stop();
+  }, SCAN_MS);
+}
+
+function scan(): void {
+  const ctx = cur;
+  if (!ctx) return;
+  if (!ageHandled && findAgeGate()) {
+    ageHandled = true;
+    if (ctx.options.autoConfirmAgeGate) void confirmAge(ctx);
+    else
+      ctx.notices.show(
+        'This community is marked 18+. Reddit asks you to confirm your age before showing it.',
+        {
+          id: 'age-gate',
+          actions: [{ label: 'Continue', hint: hint.ageContinue, run: () => void confirmAge(ctx) }],
+        },
+      );
+  }
+  if (ctx.options.removeLoginWall) removeLoginWalls();
+}
+
+function stop(): void {
+  mo?.disconnect();
+  mo = null;
+  if (timer) clearTimeout(timer);
+  timer = null;
+  if (pending) clearTimeout(pending);
+  pending = null;
+  document.removeEventListener('DOMContentLoaded', start);
+}
+
+/** Watch the page for a minute: interstitials appear early in a page view (or a route change). */
+function start(): void {
+  scan();
+  if (done()) return;
+  mo ??= new MutationObserver(soon);
+  mo.observe(document.body, { childList: true, subtree: true });
+  timer = setTimeout(stop, 60_000);
+}
+
+/** A new page view: look again from the start, for a prompt not yet explained. */
+function watch(): void {
+  stop();
+  ageHandled = false;
+  if (document.body) start();
+  else document.addEventListener('DOMContentLoaded', start, { once: true });
+}
+
 export const interstitials = defineModule({
   id: 'interstitials',
   category: 'listings',
@@ -38,31 +104,16 @@ export const interstitials = defineModule({
     },
   },
   init(ctx) {
-    let ageHandled = false;
-    const scan = () => {
-      if (!ageHandled && findAgeGate()) {
-        ageHandled = true;
-        if (ctx.options.autoConfirmAgeGate) void confirmAge(ctx);
-        else
-          ctx.notices.show(
-            'This community is marked 18+. Reddit asks you to confirm your age before showing it.',
-            {
-              id: 'age-gate',
-              actions: [
-                { label: 'Continue', hint: hint.ageContinue, run: () => void confirmAge(ctx) },
-              ],
-            },
-          );
-      }
-      if (ctx.options.removeLoginWall) removeLoginWalls();
-    };
-    const mo = new MutationObserver(scan);
-    const start = () => {
-      scan();
-      mo.observe(document.body, { childList: true, subtree: true });
-      setTimeout(() => mo.disconnect(), 60_000); // interstitials appear early; stop watching after a minute
-    };
-    if (document.body) start();
-    else document.addEventListener('DOMContentLoaded', start, { once: true });
+    cur = ctx;
+    watch();
+  },
+  onRoute(_route, ctx) {
+    // In-page navigation can reach another 18+ community: explain its prompt too.
+    cur = ctx;
+    watch();
+  },
+  dispose() {
+    stop();
+    cur = null;
   },
 });

@@ -53,11 +53,27 @@ export function feedCss(o: OldSkinOptions): string {
     // A real thumbnail or media preview takes the thumbnail cell and the placeholder steps aside.
     `${P}:has(${s.thumbnail}:not(:empty)) > .rescue-oth, ${P}:has(> ${C.mediaContainer}) > .rescue-oth { display: none; }`,
     // Pieces drawn through a slot (Firefox): Reddit's thumbnail is out of reach, so the placeholder shows its picture.
-    ...(none ? [] : [`${P} > .rescue-oth[slot] { display: block !important; width: ${px}px; height: ${px}px; }`]),
+    ...(none
+      ? []
+      : [
+          `${P} > .rescue-oth[slot] { display: block !important; width: ${px}px; height: ${px}px; }`,
+        ]),
     // A video never plays in a feed under this look: Reddit's player is hidden from the first paint
     // (never on screen, so never autoplayed) and the thumbnail shows its poster (open the post to watch).
     `${ROOT} ${C.feed} :is(${C.post}, ${C.adPost}) ${k.videoPlayer}, ${P}:has(${k.videoPlayer}) > ${C.mediaContainer} { display: none !important; }`,
-    ...(none ? [] : [`${P}:has(${k.videoPlayer}) > .rescue-oth { display: block !important; width: ${px}px; height: ${px}px; }`]),
+    ...(none
+      ? []
+      : [
+          `${P}:has(${k.videoPlayer}) > .rescue-oth { display: block !important; width: ${px}px; height: ${px}px; }`,
+        ]),
+    // A gallery zoomed down is a thin strip of every picture: the placeholder shows the first one
+    // instead, cover-fit like any other thumbnail (post.ts picture()). Open the post to page through it.
+    `${P}:has(> ${C.mediaContainer} ${C.mediaInner.gallery}) > ${C.mediaContainer} { display: none !important; }`,
+    ...(none
+      ? []
+      : [
+          `${P}:has(> ${C.mediaContainer} ${C.mediaInner.gallery}) > .rescue-oth { display: block !important; width: ${px}px; height: ${px}px; }`,
+        ]),
     `${A} > ${k.wrapAThumb} { grid-area: 1 / 3; width: ${px}px; ${none ? 'display: none;' : ''} }`,
     `${P} ${s.thumbnail} { width: ${px}px; height: auto; max-height: ${px}px; border-radius: 0; }`,
     `${P} ${s.thumbnail} > a { width: 100%; height: auto; }`,

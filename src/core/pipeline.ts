@@ -19,6 +19,12 @@ import type { Comment, Post, ProfileComment } from '../model/types';
 import type { ItemBatch } from './types';
 
 export const BUDGET_MS = 100;
+/**
+ * At most this many items go to the modules in one go; a larger batch (a whole thread at once, a
+ * settings change re-running a 5,000-comment page) is handed over in slices with a pause between
+ * them, so the page keeps answering the reader meanwhile.
+ */
+export const SLICE_SIZE = 200;
 const SEEN = 'data-rescue-seen';
 /** Tags that can become a post, search result or profile comment (search results match on attribute later). */
 const ITEM_TAGS = `${C.post}, search-telemetry-tracker, ${C.profileComment}`;
@@ -33,12 +39,111 @@ export interface PipelineOptions {
   onTiming?(ms: number, batch: ItemBatch, startedAt: number): void;
   now?: () => number;
   schedule?: (cb: () => void) => void;
+  /** Wait between two slices of a large batch (default: the next task, `setTimeout(0)`). */
+  yieldTo?: (cb: () => void) => void;
+  /** Items per slice (default SLICE_SIZE). */
+  sliceSize?: number;
+}
+
+/** One slice waiting to be handed to its receiver. */
+interface Job {
+  batch: ItemBatch;
+  sink: (batch: ItemBatch) => void;
+  /** When the work for this slice began (the flush, for the first slice of one). */
+  startedAt: number | null;
+}
+
+type Item = Post | Comment | ProfileComment;
+
+const sizeOf = (b: ItemBatch): number =>
+  b.posts.length + b.comments.length + b.profileComments.length;
+
+/**
+ * The index from which a document-ordered list of items reaches the viewport: the item just above
+ * the first one that starts below the viewport's top. A binary search, so a 5,000-item list costs
+ * a dozen measurements. Unmeasurable pages (no layout) answer 0, which keeps document order.
+ */
+function viewportIndex(items: readonly Item[]): number {
+  let lo = 0;
+  let hi = items.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (items[mid]!.source.getBoundingClientRect().top < 0) lo = mid + 1;
+    else hi = mid;
+  }
+  return Math.max(0, lo - 1);
+}
+
+/**
+ * Split `items` (document order) into the part to hand over first, the ones on screen, and the
+ * rest in document order. For comments the first part also takes the on-screen comments'
+ * ancestors from the same batch, so a parent always reaches the modules before (or with) its
+ * replies, as it does in document order (hideChildComments, showParent and readComments follow
+ * parentId to comments they have already seen).
+ */
+function splitAtViewport<T extends Item>(items: T[], size: number): { front: T[]; rest: T[] } {
+  if (items.length <= size) return { front: items, rest: [] };
+  const start = viewportIndex(items);
+  const end = Math.min(items.length, start + size);
+  const inFront = new Set<number>();
+  for (let i = start; i < end; i++) inFront.add(i);
+  const at = new Map<string, number>();
+  items.forEach((it, i) => at.set(it.id, i));
+  for (let i = start; i < end; i++) {
+    let parent = (items[i] as Partial<Comment>).parentId ?? null;
+    while (parent !== null) {
+      const j = at.get(parent);
+      if (j === undefined || inFront.has(j)) break;
+      inFront.add(j);
+      parent = (items[j] as Partial<Comment>).parentId ?? null;
+    }
+  }
+  const front: T[] = [];
+  const rest: T[] = [];
+  items.forEach((it, i) => (inFront.has(i) ? front : rest).push(it));
+  return { front, rest };
+}
+
+/** A batch as slices of at most `size` items: what is on screen first, the rest in document order. */
+export function sliceBatch(batch: ItemBatch, size: number): ItemBatch[] {
+  if (sizeOf(batch) <= size) return [batch];
+  const posts = splitAtViewport(batch.posts, size);
+  const comments = splitAtViewport(batch.comments, size);
+  const profile = splitAtViewport(batch.profileComments, size);
+  const out: ItemBatch[] = [
+    { posts: posts.front, comments: comments.front, profileComments: profile.front },
+  ];
+  const chunk = <T>(xs: T[], make: (part: T[]) => ItemBatch) => {
+    for (let i = 0; i < xs.length; i += size) out.push(make(xs.slice(i, i + size)));
+  };
+  chunk(posts.rest, (p) => ({ posts: p, comments: [], profileComments: [] }));
+  chunk(comments.rest, (c) => ({ posts: [], comments: c, profileComments: [] }));
+  chunk(profile.rest, (pc) => ({ posts: [], comments: [], profileComments: pc }));
+  return out;
 }
 
 export class Pipeline {
   readonly tally = new ContractTally();
   private readonly posts = new PostDeduper();
   private readonly seenComments = new Set<string>();
+  /**
+   * Every item emitted on this page view, by id (the newest model of each). A settings change
+   * re-runs the modules over these instead of parsing the whole page again.
+   */
+  private readonly known = {
+    posts: new Map<string, Post>(),
+    comments: new Map<string, Comment>(),
+    profileComments: new Map<string, ProfileComment>(),
+  };
+  /** Size of `known` after its last pruning; it is pruned again once it has doubled. */
+  private knownAtPrune = 0;
+  private jobs: Job[] = [];
+  /** A slice is being handed over, or the wait before the next one is running. */
+  private pumping = false;
+  /** Bumped by reset(), so a wait that was already running when the page changed does nothing. */
+  private generation = 0;
+  private readonly yieldTo: (cb: () => void) => void;
+  private readonly sliceSize: number;
   /** Threading info of every parsed comment element, so re-threading skips re-reading them. */
   private threading: ThreadCache = new WeakMap();
   private observer: MutationObserver | null = null;
@@ -65,6 +170,8 @@ export class Pipeline {
     this.root = opts.root ?? document;
     this.now = opts.now ?? (() => performance.now());
     this.schedule = opts.schedule ?? ((cb) => requestAnimationFrame(cb));
+    this.yieldTo = opts.yieldTo ?? ((cb) => void setTimeout(cb, 0));
+    this.sliceSize = Math.max(1, opts.sliceSize ?? SLICE_SIZE);
   }
 
   start(): void {
@@ -100,6 +207,89 @@ export class Pipeline {
     this.scanAll = true;
     this.tail = { stack: [], last: null };
     for (const el of this.root.querySelectorAll(`[${SEEN}]`)) el.removeAttribute(SEEN);
+    for (const m of Object.values(this.known)) m.clear();
+    this.knownAtPrune = 0;
+    // Slices of the old page view still waiting are dropped; the new view starts over.
+    this.jobs = [];
+    this.pumping = false;
+    this.generation++;
+  }
+
+  /** Slices still waiting to be handed over (tests). */
+  pending(): number {
+    return this.jobs.length;
+  }
+
+  /**
+   * Hand everything already emitted on this page view (and still on it) to `sink` again, in
+   * slices like a large batch: a settings change re-runs the modules it concerns without parsing
+   * the page again. Nothing is stamped or emitted to `onBatch`.
+   */
+  replay(sink: (batch: ItemBatch) => void): ItemBatch {
+    this.prune();
+    // In the order they were first emitted: page order for what arrives at the end, and parents
+    // always before their replies (a reply inserted mid-thread is emitted after its parent).
+    const batch: ItemBatch = {
+      posts: [...this.known.posts.values()],
+      comments: [...this.known.comments.values()],
+      profileComments: [...this.known.profileComments.values()],
+    };
+    if (sizeOf(batch)) this.enqueue(batch, sink, null);
+    return batch;
+  }
+
+  /** Forget items that left the page (an endless feed keeps adding). */
+  private prune(): void {
+    for (const m of Object.values(this.known) as Array<Map<string, Item>>) {
+      for (const [id, it] of m) if (!it.source.isConnected) m.delete(id);
+    }
+    this.knownAtPrune = this.knownSize();
+  }
+
+  private knownSize(): number {
+    return this.known.posts.size + this.known.comments.size + this.known.profileComments.size;
+  }
+
+  private remember(batch: ItemBatch): void {
+    for (const p of batch.posts) this.known.posts.set(p.id, p);
+    for (const c of batch.comments) this.known.comments.set(c.id, c);
+    for (const pc of batch.profileComments) this.known.profileComments.set(pc.id, pc);
+    if (this.knownSize() > Math.max(1000, this.knownAtPrune * 2)) this.prune();
+  }
+
+  /** Queue `batch` for `sink` in slices; the first goes at once when nothing is waiting. */
+  private enqueue(batch: ItemBatch, sink: (b: ItemBatch) => void, startedAt: number | null): void {
+    const idle = !this.pumping;
+    sliceBatch(batch, this.sliceSize).forEach((b, i) =>
+      this.jobs.push({ batch: b, sink, startedAt: i === 0 && idle ? startedAt : null }),
+    );
+    if (idle) this.pump();
+  }
+
+  private pump(): void {
+    const job = this.jobs.shift();
+    if (!job) {
+      this.pumping = false;
+      return;
+    }
+    this.pumping = true;
+    const t0 = job.startedAt ?? this.now();
+    try {
+      job.sink(job.batch);
+    } finally {
+      const ms = this.now() - t0;
+      this.opts.onTiming?.(ms, job.batch, t0);
+      if (ms > BUDGET_MS) {
+        console.warn(`[REScue] batch took ${ms.toFixed(1)} ms (budget ${BUDGET_MS} ms)`);
+        this.opts.onSlowBatch?.(ms, job.batch);
+      }
+      if (this.jobs.length) {
+        const gen = this.generation;
+        this.yieldTo(() => {
+          if (gen === this.generation) this.pump();
+        });
+      } else this.pumping = false;
+    }
   }
 
   private request(): void {
@@ -183,6 +373,9 @@ export class Pipeline {
         if (!this.seenComments.has(c.id)) {
           this.seenComments.add(c.id);
           comments.push(c);
+        } else if (this.known.comments.get(c.id)?.source !== c.source) {
+          // Reddit drew the comment again: a re-run (replay) must reach the new element.
+          this.known.comments.set(c.id, c);
         }
       }
     }
@@ -198,14 +391,11 @@ export class Pipeline {
     this.scanAll = false;
 
     const batch: ItemBatch = { posts, comments, profileComments };
-    if (posts.length || comments.length || profileComments.length) {
-      this.opts.onBatch(batch);
-      const ms = this.now() - t0;
-      this.opts.onTiming?.(ms, batch, t0);
-      if (ms > BUDGET_MS) {
-        console.warn(`[REScue] batch took ${ms.toFixed(1)} ms (budget ${BUDGET_MS} ms)`);
-        this.opts.onSlowBatch?.(ms, batch);
-      }
+    if (sizeOf(batch)) {
+      this.remember(batch);
+      // A batch larger than a slice goes over in slices (on-screen items first); each slice is
+      // timed on its own against the budget, the first one including the parsing above.
+      this.enqueue(batch, (b) => this.opts.onBatch(b), t0);
     }
     return batch;
   }

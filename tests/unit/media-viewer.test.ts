@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { RedditJsonClient } from '../../src/core/redditJson';
 import {
   buildFilmstrip,
   allowedPicture,
@@ -126,11 +127,11 @@ describe('sizes and resolution', () => {
 });
 
 describe('OriginalSizes', () => {
-  const info = (...rows: Array<[string, [number, number] | undefined]>) => ({
+  const thread = (id: string, sourceSize: [number, number] | undefined) => ({
     ok: true as const,
     cached: false,
     data: {
-      posts: rows.map(([id, sourceSize]) => ({
+      post: {
         id,
         title: null,
         numComments: 0,
@@ -140,17 +141,18 @@ describe('OriginalSizes', () => {
         likes: null,
         score: null,
         ...(sourceSize ? { sourceSize } : {}),
-      })),
+      },
+      comments: [],
     },
   });
 
-  it('asks once, in one batch, and remembers sizes (and posts with none)', async () => {
-    const calls: string[][] = [];
+  it('asks once per post, through the thread JSON, and remembers sizes (and posts with none)', async () => {
+    const calls: Array<[string, unknown]> = [];
     let known = 0;
     const sizes = new OriginalSizes(
-      (async (_e: string, p: { id: string | string[] }) => {
-        calls.push([p.id].flat());
-        return info(['t3_a', [100, 50]], ['t3_b', undefined]);
+      (async (e: string, p: { id: string }) => {
+        calls.push([e, p]);
+        return thread(p.id, p.id === 't3_a' ? [100, 50] : undefined);
       }) as never,
       () => known++,
       1,
@@ -160,19 +162,22 @@ describe('OriginalSizes', () => {
     sizes.want('t3_a');
     expect(sizes.get('t3_a')).toBeUndefined();
     await new Promise((r) => setTimeout(r, 20));
-    expect(calls).toEqual([['t3_a', 't3_b']]);
+    expect(calls).toEqual([
+      ['comments', { id: 't3_a', limit: 1, depth: 0 }],
+      ['comments', { id: 't3_b', limit: 1, depth: 0 }],
+    ]);
     expect(sizes.get('t3_a')).toEqual([100, 50]);
     expect(sizes.get('t3_b')).toBeNull();
-    expect(known).toBe(1);
+    expect(known).toBe(2);
     sizes.want('t3_a');
     await new Promise((r) => setTimeout(r, 20));
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
   });
 
   it('treats a failed read as no size, without asking again', async () => {
     let n = 0;
     const sizes = new OriginalSizes(
-      (async () => (n++, { ok: false, reason: 'network', message: 'x' })) as never,
+      (async () => (n++, { ok: false, reason: 'http', message: 'Reddit answered 403.' })) as never,
       () => {},
       1,
     );
@@ -182,6 +187,49 @@ describe('OriginalSizes', () => {
     sizes.want('t3_a');
     await new Promise((r) => setTimeout(r, 20));
     expect(n).toBe(1);
+  });
+
+  it('never asks /api/info.json (a real client, stubbed fetch)', async () => {
+    const urls: string[] = [];
+    const c = new RedditJsonClient({
+      fetchJson: async (url) => {
+        urls.push(url);
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => 'application/json' },
+          text: async () =>
+            JSON.stringify([
+              {
+                kind: 'Listing',
+                data: {
+                  children: [
+                    {
+                      kind: 't3',
+                      data: {
+                        name: 't3_a',
+                        num_comments: 0,
+                        preview: { images: [{ source: { width: 640, height: 480 } }] },
+                      },
+                    },
+                  ],
+                },
+              },
+              { kind: 'Listing', data: { children: [] } },
+            ]),
+        };
+      },
+      sleep: async () => {},
+    });
+    const sizes = new OriginalSizes(
+      (e, p, o) => c.get(e, p, o),
+      () => {},
+      1,
+    );
+    sizes.want('t3_a');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(urls).toEqual(['/comments/a.json?raw_json=1&limit=1&depth=0']);
+    expect(sizes.get('t3_a')).toEqual([640, 480]);
   });
 });
 

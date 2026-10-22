@@ -1,7 +1,12 @@
 /** Presets (RES presets) and custom toggles (RES customToggles). */
 import { hint } from '../../core/hints';
 import { defineModule, type ModuleContext, type ModuleDefinition } from '../../core/types';
-import { setOption, type SettingsProfile } from '../../core/settings';
+import {
+  isModuleEnabled,
+  saveOrNotify,
+  setOption,
+  type SettingsProfile,
+} from '../../core/settings';
 
 /** Modules kept on by the "Lite" preset (ids of modules that exist now or arrive in later stories). */
 export const LITE = new Set([
@@ -96,7 +101,7 @@ export function customToggleOn(profile: SettingsProfile, name: string): boolean 
     name?: string;
     enabled?: boolean;
   }>;
-  if (profile.modules.customToggles?.enabled === false) return true;
+  if (!isModuleEnabled(customToggles, profile)) return true;
   const row = rows.find((r) => r.name === name);
   return row ? row.enabled !== false : true;
 }
@@ -139,7 +144,8 @@ function syncMenu(ctx: ModuleContext): void {
             );
             const def = ctx.settings.definitions().find((d) => d.id === 'customToggles');
             if (def)
-              void ctx.settings.save(
+              void saveOrNotify(
+                ctx,
                 setOption(profile, def, 'toggles', rows as Array<Record<string, unknown>>),
               );
           },

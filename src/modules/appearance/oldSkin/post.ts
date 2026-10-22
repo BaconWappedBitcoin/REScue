@@ -7,7 +7,8 @@
  * - the body block: title line (title link, flair, "(domain)"), the tagline "submitted 2 hours ago
  *   by user to r/sub" (REScue's tag / ignore / filter words are placed after the author and after
  *   the end of it, through the adapter's `data-rescue-anchor` marks) and the flat link row
- *   "N comments share save hide report";
+ *   "N comments share save hide report", plus "source" on a text post while the showSource module
+ *   is on (it opens that module's popup);
  * - a placeholder thumbnail for posts that have none (shown by the stylesheet only when Reddit's
  *   own thumbnail is absent).
  *
@@ -35,6 +36,7 @@ import {
   type Ctx,
 } from './shared';
 import { nativeVote, VoteBox } from './vote';
+import { openSourcePopup, sourceEnabled } from '../../comments/showSource';
 
 /** Media Reddit hosts itself (its own image, video and gallery pages). */
 const REDDIT_HOSTED =
@@ -58,6 +60,7 @@ export class PostView {
   private readonly sub: HTMLAnchorElement;
   private readonly comments: HTMLAnchorElement;
   private readonly save: HTMLButtonElement;
+  private readonly source: HTMLButtonElement;
   private readonly thumb: HTMLElement;
   private saved = false;
   private post: Post | null = null;
@@ -96,6 +99,8 @@ export class PostView {
     this.sub = h('a', { class: 'rescue-osub' });
     this.comments = h('a', { class: 'rescue-ocomments' });
     this.save = h('button', { type: 'button', class: 'rescue-olink' }, 'save');
+    this.source = h('button', { type: 'button', class: 'rescue-olink rescue-o-source' }, 'source');
+    onActivate(this.source, () => void openSourcePopup(first.id, ctx, null, this.source));
     const words = h(
       'ul',
       { class: 'rescue-olinks' },
@@ -104,6 +109,7 @@ export class PostView {
       h('li', null, this.save),
       this.item('hide', 'hide', () => ctx.actions.hide(target, true)),
       this.item('report', 'report', () => ctx.actions.report(target)),
+      h('li', null, this.source),
     );
     onActivate(this.save, () => void this.toggleSave(target));
     this.body = h(
@@ -256,10 +262,14 @@ export class PostView {
     this.sub.hidden = !showSub;
     setText(this.sub, `r/${p.subreddit}`);
     setAttr(this.sub, 'href', `/r/${p.subreddit}/`);
+    // "source" only for a text post, and only while the showSource module is on.
+    const sourceItem = this.source.parentElement;
+    if (sourceItem) setAttr(sourceItem, 'hidden', isSelf && sourceEnabled(this.ctx) ? null : '');
     setText(this.comments, commentsText(p.commentCount));
     setAttr(this.comments, 'href', p.permalink);
     const video = this.host.querySelector(C.skin.videoPlayer);
-    const pic = this.thumb.hasAttribute('slot') || video ? this.picture() : null;
+    const gallery = this.gallery();
+    const pic = this.thumb.hasAttribute('slot') || video || gallery ? this.picture() : null;
     setAttr(this.thumb, 'data-kind', pic ? 'img' : isSelf ? 'self' : 'link');
     if (pic) this.thumb.style.setProperty('--os-thumb', pic);
     else this.thumb.style.removeProperty('--os-thumb');
@@ -272,13 +282,28 @@ export class PostView {
    * CSS url() of an https address only.
    */
   private picture(): string | null {
-    const img = this.host.querySelector<HTMLImageElement>(
-      `${C.skin.postSlots.thumbnail} img[src], ${C.mediaContainer} img[src]`,
-    );
+    // A gallery's first picture (feeds draw it in place of the zoomed-down strip of all of them);
+    // a picture Reddit has not loaded yet still names its address in the lazy attribute.
+    const first = this.gallery()?.querySelector<HTMLImageElement>('img');
+    const img =
+      (first?.getAttribute('src') || first?.getAttribute(C.galleryLazySrc) ? first : null) ??
+      this.host.querySelector<HTMLImageElement>(
+        `${C.skin.postSlots.thumbnail} img[src], ${C.mediaContainer} img[src]`,
+      );
     const poster = this.host.querySelector(C.skin.videoPlayer)?.getAttribute(C.skin.videoPoster);
-    const src = img?.currentSrc || img?.getAttribute('src') || poster || '';
+    const src =
+      img?.currentSrc ||
+      img?.getAttribute('src') ||
+      img?.getAttribute(C.galleryLazySrc) ||
+      poster ||
+      '';
     if (!/^https:\/\//i.test(src)) return null;
     return `url("${src.replace(/["\\\n\r]/g, encodeURIComponent)}")`;
+  }
+
+  /** The post's own gallery, when its media is one. */
+  private gallery(): Element | null {
+    return this.host.querySelector(`:scope > ${C.mediaContainer} ${C.mediaInner.gallery}`);
   }
 
   dispose(): void {

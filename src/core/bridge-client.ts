@@ -8,6 +8,7 @@ import {
   type BridgeResponse,
   type Envelope,
 } from './bridge-protocol';
+import { currentToken } from './instance';
 
 const DEFAULT_TIMEOUT_MS = 5000;
 
@@ -41,11 +42,18 @@ export class BridgeClient {
     });
   }
 
-  /** Stamp (or reuse) a reference on an element so the MAIN world can find it. */
+  /**
+   * Stamp (or reuse) a reference on an element so the MAIN world can find it. Refs carry the page
+   * instance's token (core/instance.ts): after an add-on reload in an open tab a new client numbers
+   * from 1 again, and a bare "r1" could find an element an older instance stamped. Only this
+   * instance's own refs are reused.
+   */
   ref(el: Element): string {
+    const token = currentToken();
+    const prefix = token ? `${token}-r` : 'r';
     let r = el.getAttribute(REF_ATTR);
-    if (!r) {
-      r = `r${++this.refSeq}`;
+    if (!r?.startsWith(prefix)) {
+      r = `${prefix}${++this.refSeq}`;
       el.setAttribute(REF_ATTR, r);
     }
     return r;

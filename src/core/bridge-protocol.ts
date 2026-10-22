@@ -10,7 +10,19 @@ export const REF_ATTR = 'data-rescue-ref';
 export const NAVIGATED_EVENT = 'rescue:navigated';
 
 export type NativeControl =
-  'upvote' | 'downvote' | 'save' | 'hide' | 'reply' | 'edit' | 'join' | 'over18' | 'share';
+  | 'upvote'
+  | 'downvote'
+  | 'save'
+  | 'hide'
+  | 'reply'
+  | 'edit'
+  | 'join'
+  | 'over18'
+  | 'share'
+  /** The selected post's own gallery arrows / video mute button (media keys). */
+  | 'galleryPrev'
+  | 'galleryNext'
+  | 'muteToggle';
 
 /** Which item's own overflow menu a menu op opens (a post's or a comment's). */
 export type MenuKind = 'post' | 'comment';
@@ -28,6 +40,15 @@ export type BridgeRequest =
   | { op: 'composer.insert'; ref: string; text: string }
   | { op: 'composer.submit'; ref: string }
   /**
+   * Comment tools (all scoped to the `comment-composer-host` the ref names; any other element is
+   * refused). insertAt puts text at the caret without touching the rest; read reports the box's
+   * text and the composer's mode; markdownMode presses Reddit's own "Switch to Markdown" button
+   * when the composer is not in Markdown mode yet (not found: nothing is pressed).
+   */
+  | { op: 'composer.insertAt'; ref: string; text: string }
+  | { op: 'composer.read'; ref: string }
+  | { op: 'composer.markdownMode'; ref: string }
+  /**
    * Open the item's own overflow menu, find its Save / Hide row by text, report the row's current
    * text, and click it (save / hide actions). Nothing is clicked when no row matches.
    */
@@ -35,9 +56,30 @@ export type BridgeRequest =
   /** Read the Save / Hide row's current text only; the menu is closed again (no click). */
   | { op: 'menu.state'; ref: string; menu: MenuKind; item: MenuItemKind };
 
+/**
+ * composer.insert / composer.insertAt: the box did not take the focus (it stayed in another box),
+ * so nothing was typed. Typing then would have landed in whatever box held the focus.
+ */
+export const NOT_FOCUSED = 'not-focused';
+
+/**
+ * Error codes a bridge op answers with. `not-composer`: the ref is not a composer host;
+ * `bad-request`: the text is not a string or is longer than the bridge accepts.
+ */
+export type BridgeError =
+  | 'not-found'
+  | 'not-editable'
+  | 'unsupported'
+  | 'no-method'
+  | 'not-composer'
+  | 'bad-request'
+  | typeof NOT_FOCUSED
+  | 'timeout'
+  | `threw: ${string}`;
+
 export interface BridgeResponse {
   ok: boolean;
-  error?: string;
+  error?: BridgeError | (string & {});
   accepted?: boolean;
   /** native.state: true/false from the control's pressed state; null when it carries none. */
   pressed?: boolean | null;
@@ -49,6 +91,10 @@ export interface BridgeResponse {
   itemState?: 'on' | 'off';
   /** menu.item / menu.state: the matched row's own text, for diagnostics. */
   itemText?: string;
+  /** composer.read: the box's current text. */
+  text?: string;
+  /** composer.read: the composer's `mode` attribute ("richText", "markdown"), '' when absent. */
+  mode?: string;
 }
 
 export interface Envelope<T> {

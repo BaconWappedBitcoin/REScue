@@ -19,6 +19,23 @@ permission only so that large tag, filter and read-history lists are never evict
   comment count, until the watch ends (2 days by default) or you unsubscribe. They are not synced.
 - Tags leave your device only in a backup file you export yourself. Importing a backup
   (REScue's own, or a Reddit Enhancement Suite backup) reads a file you pick; nothing is uploaded.
+  The export is handed to your browser's download without ever being placed in Reddit's page, and
+  its temporary address is dropped as soon as the download starts.
+
+### Small copies kept in reddit.com's own storage
+
+So that a few looks apply from the very first paint (before REScue's settings can be read), three
+features keep a small copy of their choice in reddit.com's `localStorage`. That storage belongs to
+the Reddit page, so **Reddit's own scripts can read it**. Each copy holds only what is listed here,
+and is removed when the feature is off or back at Reddit's default:
+
+| Key                   | Kept by                                                  | What it holds                                                                                      |
+| --------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `rescue:oldSkin`      | Old Reddit look (`appearance/oldSkin/early.ts`)          | That module's own options (which parts of the old look are on, thumbnail size, dark-mode colours)  |
+| `rescue:commentMedia` | Hide inline media (`listings/inlineMedia/earlyStyle.ts`) | Whether comment media is hidden, and the subreddit names you set to always show or always collapse |
+| `rescue:frontSort`    | Logo link, front page sort (`appearance/logoLink.ts`)    | The sort you chose for the front page (hot, new, top or rising)                                    |
+
+Nothing else of yours (tags, filters, history, other settings) is ever written there.
 
 ## Network requests REScue makes
 
@@ -29,23 +46,31 @@ destination is refused, and `oauth.reddit.com` in particular is never used. RESc
 images, scripts, frames, fonts or media from any host, and its background worker makes no
 requests.
 
-Every request is a **read-only GET** (REScue never sends a POST, PUT, PATCH or DELETE), made only
+Every request is a **read-only GET** (REScue never sends a POST, PUT, PATCH or DELETE; `net.ts`
+refuses any other method, and any request body, before anything leaves). If Reddit answers with a
+redirect to any other site, the answer is thrown away unread. Requests are made only
 when the feature that needs it is used, and never more than once a second per address. The pages
 it may read are these, and nothing else:
 
-| Address (on the page's own origin) | What it reads | When |
-|---|---|---|
-| `/svc/shreddit/user-hover-card/…` and `/svc/shreddit/community-hover-card/…` | Reddit's own hover-card fragments for a user or community | Only by code that shows a user or community card; not connected to anything in this version |
-| `/subreddits/mine.json` | The subreddits you subscribe to (name, link, subscriber count) | Only when you press "my subreddits" in the shortcut bar; one request per 100 subscriptions, kept in memory for about an hour |
-| `/api/info.json?id=…` | The comment count of each thread you chose to "subscribe" to (up to 100 per request) | Only if you subscribed to at least one thread; about every 10 minutes while a Reddit tab is open (one tab does it, not all) |
-| `/comments/<id>.json` | One thread's post and comment details | Reserved; no feature uses it in this version |
-| `/api/me.json` | Which account you are signed in as | Reserved; no feature uses it in this version |
-| `/prefs/blocked.json` | The users you blocked on Reddit | Only when you press "Import Reddit's blocked users as ignored" and then confirm; Reddit's own block list is never changed |
+| Address (on the page's own origin)                                           | What it reads                                                                                        | When                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/svc/shreddit/user-hover-card/…` and `/svc/shreddit/community-hover-card/…` | Reddit's own hover-card fragments for a user or community                                            | Only by code that shows a user or community card; not connected to anything in this version                                                                                                           |
+| `/subreddits/mine.json`                                                      | The subreddits you subscribe to (name, link, subscriber count)                                       | Only when you press "my subreddits" in the shortcut bar; one request per 100 subscriptions, kept in memory for about an hour                                                                          |
+| `/comments/<post>.json?raw_json=1&limit=1&depth=0`                           | The comment count of each thread you chose to "subscribe" to (one request per thread, just the post) | Only if you subscribed to at least one thread; about every 10 minutes while a Reddit tab is open (one tab does it, not all), at most 25 threads a round (more are taken in turn over the next rounds) |
+| `/comments/<post>.json?raw_json=1&limit=1&depth=0`                           | The raw Markdown text of the text post whose "source" word you clicked ("Show source")               | Only when you click "source" while signed in; one request per click (a repeat click within a minute reuses the answer)                                                                                |
+| `/comments/<post>/_/<comment>.json?raw_json=1&limit=1&depth=1`               | The raw Markdown text of the one comment whose "source" word you clicked ("Show source")             | Only when you click "source" while signed in; one request per click (a repeat click within a minute reuses the answer)                                                                                |
+| `/comments/<post>.json?raw_json=1&limit=1&depth=0`                           | A picture post's original pixel size (for "Display original resolution" in the media viewer)         | Only while that option is on, for the pictures it labels; one request per post, asked once                                                                                                            |
+| `/api/me.json`                                                               | Which account you are signed in as                                                                   | Reserved; no feature uses it in this version                                                                                                                                                          |
+| `/prefs/blocked.json`                                                        | The users you blocked on Reddit                                                                      | Only when you press "Import Reddit's blocked users as ignored" and then confirm; Reddit's own block list is never changed                                                                             |
+| `/api/multi/mine.json`                                                       | Your custom feeds (name and address of each)                                                         | Only when you open "feeds ▾" in the shortcut bar (signed in); one request, kept in memory for about an hour                                                                                           |
 
 What REScue reads this way is used on your device and is not sent anywhere. The lists of
 subscribed threads (with their last comment count) are stored only on this device. If Reddit
-answers one of these requests with an error (403 or 429) or with a web page instead of data,
-REScue stops asking for 10 minutes and tells you so. If Reddit changes the format of an answer,
+answers one of these requests with a refusal (403) or with a web page instead of data, REScue
+stops asking that address for 10 minutes and tells you so; if Reddit says REScue asks too often
+(429), it stops asking for anything for 10 minutes. Reddit's `/api/info.json`, which earlier
+versions read, is no longer asked for: since 2026-10-21 Reddit refuses it (403) even to signed-in
+readers. If Reddit changes the format of an answer,
 REScue shows a warning and turns that feature off rather than guess. Signed out, these features
 are disabled with a "sign in" hint.
 

@@ -147,6 +147,11 @@ export class HighlightRows {
     setAttr(carousel, K.shownAttr, '1');
   }
 
+  /** REScue's rows were drawn and has since been taken out of the page (Reddit re-rendered there). */
+  gone(): boolean {
+    return !!this.box && !this.box.isConnected;
+  }
+
   clear(doc: Document = document): void {
     this.box?.remove();
     this.box = null;

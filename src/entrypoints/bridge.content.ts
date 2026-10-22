@@ -1,8 +1,10 @@
 /**
  * The ONLY code that runs in the page's own JavaScript realm. On request it does a handful of
  * things — load a programmatic partial, press a native control (a comment's controls are looked
- * for only in its own action row), open an item's own overflow menu and press its Save / Hide row
- * (or just read it), focus or put text into Reddit's composer, press its submit — and announces
+ * for only in its own action row; a post's gallery arrows and video mute button only inside their
+ * own gallery carousel / player), open an item's own overflow menu and press its Save / Hide row
+ * (or just read it), focus or put text into Reddit's composer (all of it, or at the caret), read
+ * its text, switch it to Markdown with its own button, press its submit — and announces
  * SPA navigations. It never reads storage, never fetches, and exposes no general eval
  * (contracts/messaging.md).
  *
@@ -10,6 +12,7 @@
  * kookaburrabarrel, cff40d7).
  */
 import { C } from '../contracts/reddit';
+import { deepQuery, deepQueryAll } from '../core/deepQuery';
 import {
   CHANNEL_ATTR,
   NAVIGATED_EVENT,
@@ -22,6 +25,7 @@ import {
   type MenuItemKind,
   type MenuKind,
   type NativeControl,
+  NOT_FOCUSED,
 } from '../core/bridge-protocol';
 
 export default defineContentScript({
@@ -35,38 +39,7 @@ export default defineContentScript({
     if (flags.__rescueBridge) return;
     Object.defineProperty(flags, '__rescueBridge', { value: true });
     const byRef = (ref: string): Element | null =>
-      /^[a-z0-9-]{1,40}$/i.test(ref) ? document.querySelector(`[${REF_ATTR}="${ref}"]`) : null;
-
-    /** querySelector that also searches open shadow roots below `root`. */
-    const deepQuery = (root: Element, sel: string): Element | null => {
-      const direct = root.querySelector(sel);
-      if (direct) return direct;
-      const stack: Element[] = [root];
-      while (stack.length) {
-        const el = stack.pop()!;
-        const sr = (el as HTMLElement).shadowRoot;
-        if (sr) {
-          const hit = sr.querySelector(sel);
-          if (hit) return hit;
-          stack.push(...sr.querySelectorAll('*'));
-        }
-        stack.push(...el.children);
-      }
-      return null;
-    };
-
-    /** Every match below `root`, searching open shadow roots too. */
-    const deepQueryAll = (root: Element, sel: string): Element[] => {
-      const out: Element[] = [...root.querySelectorAll(sel)];
-      const stack: Element[] = [root, ...root.querySelectorAll('*')];
-      while (stack.length) {
-        const sr = (stack.pop() as HTMLElement).shadowRoot;
-        if (!sr) continue;
-        out.push(...sr.querySelectorAll(sel));
-        stack.push(...sr.querySelectorAll('*'));
-      }
-      return out;
-    };
+      /^[a-z0-9-]{1,64}$/i.test(ref) ? document.querySelector(`[${REF_ATTR}="${ref}"]`) : null;
 
     const controlSelector: Partial<Record<NativeControl, string>> = {
       upvote: C.native.upvote,
@@ -74,7 +47,24 @@ export default defineContentScript({
       reply: C.native.reply,
       join: C.native.joinButton,
       share: C.native.share,
+      galleryPrev: C.mediaControls.galleryPrev,
+      galleryNext: C.mediaControls.galleryNext,
+      muteToggle: C.mediaControls.mute,
     };
+
+    /**
+     * A media control (gallery arrows, video mute) lives inside its OWN host inside the post: the
+     * arrows in the post's gallery carousel, the mute button in its player (whose controls may sit
+     * in nested open roots). The host is found first so the control is looked for only there,
+     * never elsewhere in the post (verified live 2026-10-21).
+     */
+    const mediaHostOf = (post: Element, control: NativeControl): Element | null =>
+      control === 'muteToggle'
+        ? deepQuery(post, C.mediaControls.player)
+        : deepQuery(post, C.mediaControls.gallery);
+
+    const isMediaControl = (control: NativeControl): boolean =>
+      control === 'galleryPrev' || control === 'galleryNext' || control === 'muteToggle';
 
     const isComment = (el: Element): boolean => el.matches(C.comment);
 
@@ -97,6 +87,12 @@ export default defineContentScript({
         comment && control === 'reply' ? C.commentActions.replyButton : controlSelector[control];
       if (!sel) return null;
       const find = (): Element | null => {
+        // A media control is searched for only inside its own host (the post's gallery carousel
+        // or video player), so another carousel's or player's buttons are never taken.
+        if (isMediaControl(control)) {
+          const host = mediaHostOf(el, control);
+          return host ? deepQuery(host, sel) : null;
+        }
         const root = comment ? ownRow(el) : el;
         return root ? deepQuery(root, sel) : null;
       };
@@ -265,6 +261,86 @@ export default defineContentScript({
       return { ok: true, focused: !!now && (now === editor || editor.contains(now)) };
     };
 
+    // ---- comment tools: scoped to the comment-composer-host the caller referenced ----------
+    const T = C.composerTools;
+    /** Longest text a composer op types (Reddit's own comment limit is 10 000); badText checks. */
+    const MAX_TEXT = 40_000;
+    const shown = (el: Element): boolean => el instanceof HTMLElement && el.offsetWidth > 0;
+    /**
+     * Markdown mode: the composer says so, or it SHOWS a plain box and no rich-text editor (live
+     * 2026-10-21 Reddit opened a reply box in Markdown, remembering the reader's choice, while its
+     * `mode` attribute still said "richText"; Save then looked for a switch that was not there).
+     */
+    const isMarkdown = (host: Element): boolean =>
+      T.markdownMode.test(deepQuery(host, T.composer)?.getAttribute(T.modeAttr) ?? '') ||
+      (deepQueryAll(host, T.plainEditor).some(shown) &&
+        !deepQueryAll(host, T.richEditor).some(shown));
+    /**
+     * The host's editable box: the plain box in Markdown mode, else the rich-text editor. A box on
+     * screen wins over one Reddit keeps hidden (in Markdown mode the rich-text editor stays in the
+     * DOM at zero width: live 2026-10-21, where writing into it lost the text).
+     */
+    const editorOf = (host: Element): HTMLElement | null => {
+      const order = isMarkdown(host)
+        ? [T.plainEditor, T.richEditor, C.composer.editor]
+        : [T.richEditor, T.plainEditor, C.composer.editor];
+      let hidden: HTMLElement | null = null;
+      for (const sel of order) {
+        for (const hit of deepQueryAll(host, sel)) {
+          if (!(hit instanceof HTMLElement)) continue;
+          if (hit.getClientRects().length && hit.offsetWidth > 0) return hit;
+          hidden ??= hit;
+        }
+      }
+      return hidden;
+    };
+    const editorText = (ed: HTMLElement): string =>
+      ed instanceof HTMLTextAreaElement ? ed.value : (ed.textContent ?? '');
+    const squash = (s: string): string => s.replace(/\s+/g, ' ').trim();
+    const badText = (text: unknown): boolean => typeof text !== 'string' || text.length > MAX_TEXT;
+    /**
+     * Focus the box; true only once it (or something in it) really holds the focus. execCommand
+     * types into whatever does, so if it stayed in another box nothing is typed (`not-focused`).
+     */
+    const focusInto = (editor: HTMLElement): boolean => {
+      const inside = (n = activeDeep()): boolean => !!n && (n === editor || editor.contains(n));
+      if (!inside()) editor.focus();
+      return inside();
+    };
+
+    /** Put text at the caret (replacing a selection inside the box), never selecting all. */
+    const insertAt = async (host: Element, text: string): Promise<BridgeResponse> => {
+      const editor = editorOf(host);
+      if (!editor) return { ok: false, error: 'not-found' };
+      if (!focusInto(editor)) return { ok: false, error: NOT_FOCUSED };
+      if (editor instanceof HTMLTextAreaElement) {
+        const start = editor.selectionStart ?? editor.value.length;
+        const end = editor.selectionEnd ?? start;
+        editor.setRangeText(text, start, end, 'end');
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+      } else {
+        document.execCommand('insertText', false, text);
+      }
+      await sleep(300);
+      const want = squash(text);
+      return { ok: true, accepted: want === '' || squash(editorText(editor)).includes(want) };
+    };
+
+    /** Press Reddit's own "Switch to Markdown" button unless the composer is already Markdown. */
+    const markdownMode = async (host: Element): Promise<BridgeResponse> => {
+      if (isMarkdown(host)) return { ok: true, accepted: true };
+      const btn = deepQueryAll(host, T.switchButton).find((b) =>
+        T.switchLabel.test(b.getAttribute('aria-label') ?? b.textContent ?? ''),
+      ) as HTMLElement | undefined;
+      if (!btn) return { ok: false, error: 'not-found' };
+      btn.click();
+      for (let i = 0; i < 20; i++) {
+        await sleep(100);
+        if (isMarkdown(host)) return { ok: true, accepted: true };
+      }
+      return { ok: true, accepted: false };
+    };
+
     const findOver18 = (): HTMLElement | null => {
       const host = document.querySelector(C.ageGate.host);
       if (!host) return null;
@@ -326,9 +402,14 @@ export default defineContentScript({
         case 'menu.state':
           return menuItemAction(el, req.menu, req.item, false);
         case 'composer.insert': {
-          const editor = deepQuery(el, C.composer.editor) as HTMLElement | null;
+          // Only a named composer host, documented text, and only once the box itself holds the
+          // focus (selectAll would otherwise empty whatever box does).
+          if (!el.matches(C.composer.host)) return { ok: false, error: 'not-composer' };
+          if (badText(req.text)) return { ok: false, error: 'bad-request' };
+          // The box Reddit shows (Markdown-aware), never a hidden one (editorOf).
+          const editor = editorOf(el);
           if (!editor) return { ok: false, error: 'not-found' };
-          editor.focus();
+          if (!focusInto(editor)) return { ok: false, error: NOT_FOCUSED };
           if (editor instanceof HTMLTextAreaElement) {
             editor.value = req.text;
             editor.dispatchEvent(new Event('input', { bubbles: true }));
@@ -345,7 +426,24 @@ export default defineContentScript({
             accepted: now.replace(/\s+/g, ' ').trim() === req.text.replace(/\s+/g, ' ').trim(),
           };
         }
+        case 'composer.insertAt':
+        case 'composer.read':
+        case 'composer.markdownMode': {
+          // Only ever the composer host the caller named, and only the documented shapes.
+          if (!el.matches(T.host)) return { ok: false, error: 'not-composer' };
+          if (req.op === 'composer.markdownMode') return markdownMode(el);
+          if (req.op === 'composer.insertAt')
+            return badText(req.text) ? { ok: false, error: 'bad-request' } : insertAt(el, req.text);
+          const editor = editorOf(el);
+          if (!editor) return { ok: false, error: 'not-found' };
+          return {
+            ok: true,
+            text: editorText(editor),
+            mode: deepQuery(el, T.composer)?.getAttribute(T.modeAttr) ?? '',
+          };
+        }
         case 'composer.submit': {
+          if (!el.matches(C.composer.host)) return { ok: false, error: 'not-composer' };
           const btn = deepQuery(el, C.composer.submit) as HTMLElement | null;
           if (!btn) return { ok: false, error: 'not-found' };
           btn.click();

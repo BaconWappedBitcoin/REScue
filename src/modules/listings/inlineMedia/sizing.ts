@@ -94,7 +94,7 @@ export function ratioOf(post: Post, box: Element | null = null): number | null {
 
 /**
  * “1920 × 1080” for a single picture: the pixels of a loaded original-file picture (i.redd.it),
- * else the original size Reddit lists for the post (`known`, from `/api/info.json`; see
+ * else the original size Reddit lists for the post (`known`, from the thread JSON; see
  * originalSizes.ts). Resized previews would show the wrong size, so they are never measured.
  */
 export function resolutionOf(

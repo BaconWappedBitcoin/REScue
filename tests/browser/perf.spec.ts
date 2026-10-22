@@ -29,8 +29,12 @@ const STYLE = `<style>
   shreddit-comment { display: block; margin-left: 8px }
 </style>`;
 
-/** Depth pattern for one root comment with replies: siblings, nesting, and a return to root. */
-const TREE_DEPTHS = [0, 1, 2, 3, 2, 1, 2, 0, 1, 1];
+/**
+ * Depth pattern for root comments with replies: siblings, nesting down to depth 9 (so walks over a
+ * comment's subtree meet real reply chains), and a return to root. 100 / 20: every batch starts at
+ * a root comment.
+ */
+const TREE_DEPTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 6, 3, 1, 2, 3, 4, 2, 1, 0];
 
 function comments(from: number, count: number): FixtureComment[] {
   const out: FixtureComment[] = [];
@@ -119,9 +123,11 @@ async function appendBatches(
       for (const html of batches) {
         // Inserting the markup is Reddit's own work; the clock starts when the content has arrived.
         container.insertAdjacentHTML('beforeend', html);
-        const t0 = performance.now();
+        // Finding the batch's last item walks every item on the page: the test's own work, done
+        // before the clock starts (MutationObserver callbacks only run after this script yields).
         const all = container.querySelectorAll(itemSelector);
         const last = all[all.length - 1]!;
+        const t0 = performance.now();
         await new Promise<void>((resolve) => {
           const done = () => {
             results.push(performance.now() - t0);

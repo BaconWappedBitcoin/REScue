@@ -217,6 +217,7 @@ describe('my subreddits on the shortcut bar', () => {
     const saves: Array<Array<Record<string, unknown>>> = [];
     const settings = {
       profile: () => ({ schemaVersion: 1, keybindings: {}, syncEnabled: false, modules: {} }),
+      definitions: () => [],
       save: async (p: { modules: { subredditManager: { options: { subreddits: never[] } } } }) => {
         saves.push(p.modules.subredditManager.options.subreddits);
       },

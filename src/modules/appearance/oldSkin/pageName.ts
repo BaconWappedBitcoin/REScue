@@ -35,6 +35,11 @@ export class PageName {
     if (this.el.previousElementSibling !== logo) logo.after(this.el);
   }
 
+  /** REScue's page name was drawn and has since been taken out of the page (Reddit re-rendered there). */
+  gone(): boolean {
+    return !!this.el && !this.el.isConnected;
+  }
+
   clear(): void {
     this.el?.remove();
     this.el = null;

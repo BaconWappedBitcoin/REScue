@@ -164,12 +164,15 @@ function validatePattern(type: RuleType, pattern: string): string | null {
   return p.ok ? null : p.error;
 }
 
+/** Is a stored rule row on? A missing `enabled` counts as on (as in RES and the inline menu). */
+export const ruleOn = (r: { enabled?: unknown }): boolean => r.enabled !== false;
+
 /** Compile stored rules; invalid ones are disabled and reported, blank new rows skipped silently. */
 export function compileRules(rows: FilterRule[]): { rules: CompiledRule[]; errors: string[] } {
   const rules: CompiledRule[] = [];
   const errors: string[] = [];
   for (const r of rows) {
-    if (!r || !r.enabled) continue;
+    if (!r || !ruleOn(r)) continue;
     if (needsPattern(r.type) && !String(r.pattern ?? '').trim()) continue; // incomplete row
     const problem = validateRule(r);
     if (problem) {

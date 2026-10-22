@@ -15,6 +15,8 @@ import { blockedList, infoListing, minePage } from '../fixtures/redditJson';
 // the `.json` routes are answered from fixtures by tests/browser/harness.ts.
 const ME = 'rockpaperblr';
 const THREAD_URL = 'https://www.reddit.com/r/Layoffs/comments/text1/got_laid_off/';
+// Subscriptions read each watched thread's own JSON (Reddit retired /api/info.json, 2026-10-21).
+const THREAD_JSON = '/comments/text1.json';
 const LISTING_URL = 'https://www.reddit.com/r/programming/';
 
 const AUTHORS: Record<number, string> = { 2: 'repeater', 6: 'repeater', 7: 'ignoreme' };
@@ -60,7 +62,10 @@ test.describe('thread subscriptions', () => {
 
   test('subscribe, get told about new comments, see the badge in the panel, unsubscribe', async () => {
     const { page, requests } = await open(THREAD_URL, threadPage(true), {
-      '/api/info.json': infoListing([{ id: 't3_text1', comments: 1120, title: 'Got laid off' }]),
+      [THREAD_JSON]: [
+        infoListing([{ id: 't3_text1', comments: 1120, title: 'Got laid off' }]),
+        { kind: 'Listing', data: { children: [] } },
+      ],
     });
     const btn = page.locator('.rescue-subscribe');
     await expect(btn).toHaveText('subscribe');
@@ -72,8 +77,9 @@ test.describe('thread subscriptions', () => {
       timeout: 25_000,
     });
     await expect(notice(page).getByRole('button', { name: 'Open' })).toBeVisible();
-    const info = reads(requests, '/api/info.json');
-    expect(info).toEqual([{ method: 'GET', path: '/api/info.json?raw_json=1&id=t3_text1' }]);
+    expect(reads(requests, THREAD_JSON)).toEqual([
+      { method: 'GET', path: `${THREAD_JSON}?raw_json=1&limit=1&depth=0` },
+    ]);
 
     await page.locator('#rescue-gear').click();
     const row = page.locator('#rescue-menu [data-menu-id="threadSubscriptions"]');
@@ -94,7 +100,7 @@ test.describe('thread subscriptions', () => {
 
   test('Reddit answering 429 pauses the reads, says so, and changes nothing else', async () => {
     const { page, requests } = await open(THREAD_URL, threadPage(true), {
-      '/api/info.json': rawReply(429, 'slow down'),
+      [THREAD_JSON]: rawReply(429, 'slow down'),
     });
     await page.locator('.rescue-subscribe').click();
     await expect(
@@ -102,13 +108,13 @@ test.describe('thread subscriptions', () => {
     ).toBeVisible({
       timeout: 25_000,
     });
-    expect(reads(requests, '/api/info.json')).toHaveLength(1);
+    expect(reads(requests, THREAD_JSON)).toHaveLength(1);
     await expect(page.locator('.rescue-subscribe')).toHaveText('unsubscribe');
   });
 
   test('a changed answer shape is a visible warning, not a silent empty result', async () => {
     const { page } = await open(THREAD_URL, threadPage(true), {
-      '/api/info.json': { surprise: 'different format' },
+      [THREAD_JSON]: { surprise: 'different format' },
     });
     await page.locator('.rescue-subscribe').click();
     await expect(notice(page).filter({ hasText: 'not in the expected format' })).toBeVisible({

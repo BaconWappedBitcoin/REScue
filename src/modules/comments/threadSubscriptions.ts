@@ -28,7 +28,14 @@ import {
   totalNew,
   type SubMap,
 } from './subscriptionModel';
-import { CHECK_EVERY_MS, SUBS_KEY, runCheck, storageLock } from './subscriptionPoller';
+import {
+  CHECK_EVERY_MS,
+  SUBS_KEY,
+  migrateLegacySubs,
+  runCheck,
+  storageCursor,
+  storageLock,
+} from './subscriptionPoller';
 import { closeSubscriptions, openSubscriptions, refreshSubscriptions } from './subscriptionPanel';
 
 interface State {
@@ -50,9 +57,9 @@ const days = (s: State): number =>
   Math.max(1, Math.round(Number(s.ctx.options.subscriptionLength) || 2));
 
 /**
- * The list lives under its own storage key, written at once (not through the debounced module
- * store), so a read right after a write sees it and another tab never overwrites it with a
- * stale copy of unrelated module data.
+ * The list lives under the shared key STORAGE_KEYS.threadSubscriptions (part of the backup),
+ * written at once rather than through the debounced store, so another tab's read-modify-write
+ * right after sees it and never puts back a stale copy.
  */
 async function load(_s: State): Promise<SubMap> {
   const got = await browser.storage.local.get(SUBS_KEY);
@@ -159,6 +166,7 @@ async function check(s: State): Promise<void> {
     },
     getJson: s.getJson,
     lock: storageLock(owner),
+    cursor: storageCursor(),
     now: Date.now,
     onGrew: (grew) => {
       for (const { sub, added } of grew) {
@@ -229,6 +237,7 @@ export const threadSubscriptions = defineModule({
       chain: Promise.resolve(),
     };
     state = s;
+    await migrateLegacySubs().catch((err) => console.error('[REScue] subscriptions', err));
     s.subs = await load(s);
     paintMenu(s);
     schedule(s);

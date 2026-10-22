@@ -44,6 +44,28 @@ export class Decorations {
   private readonly retired = new Map<string, Array<WeakRef<Node>>>();
   private readonly listeners = new Set<(id: string) => void>();
   private reveal = false;
+  /** Open `batch()` calls; while above zero, changes are collected in `pending` instead of sent. */
+  private batching = 0;
+  /** Items changed during the current batch, each told to the listeners once when it ends. */
+  private readonly pending = new Set<string>();
+
+  /**
+   * Run `fn` and tell the listeners about each changed item once, after it returns. A pipeline
+   * batch has every module decorate the same comment several times; layouts re-placing the item
+   * after each of those calls was most of a batch's cost on a long thread.
+   */
+  batch<T>(fn: () => T): T {
+    this.batching++;
+    try {
+      return fn();
+    } finally {
+      if (--this.batching === 0 && this.pending.size) {
+        const ids = [...this.pending];
+        this.pending.clear();
+        for (const id of ids) this.notify(id);
+      }
+    }
+  }
 
   /** Show hidden items marked as hidden (with their reason) instead of hiding them. */
   setReveal(on: boolean): void {
@@ -77,35 +99,41 @@ export class Decorations {
     return e;
   }
 
+  // Calls that change nothing (the same reason again, an item that was never collapsed, ...) tell
+  // no one: every module repeats them for every item of every batch.
   hide(item: ItemLike, reason: string): void {
-    this.entry(item.id).hidden.add(reason);
+    const hidden = this.entry(item.id).hidden;
+    if (hidden.has(reason)) return;
+    hidden.add(reason);
     this.changed(item.id);
   }
 
   /** Withdraw one reason (the caller's own), or every reason when none is given. */
   unhide(item: ItemLike, reason?: string): void {
-    const e = this.items.get(item.id);
-    if (e) {
-      if (reason === undefined) e.hidden.clear();
-      else e.hidden.delete(reason);
-    }
+    const hidden = this.items.get(item.id)?.hidden;
+    if (!hidden?.size || (reason !== undefined && !hidden.has(reason))) return;
+    if (reason === undefined) hidden.clear();
+    else hidden.delete(reason);
     this.changed(item.id);
   }
 
   /** Collapse only the item's own body (a comment's replies stay visible). */
   collapseBody(item: ItemLike, on: boolean): void {
+    if ((this.items.get(item.id)?.collapsed === true) === on) return;
     this.entry(item.id).collapsed = on;
     this.changed(item.id);
   }
 
   /** Add a class to the item's own author link. */
   markAuthor(item: ItemLike, cls: string): void {
-    this.entry(item.id).authorClasses.add(cls);
+    const classes = this.entry(item.id).authorClasses;
+    if (classes.has(cls)) return;
+    classes.add(cls);
     this.changed(item.id);
   }
 
   unmarkAuthor(item: ItemLike, cls: string): void {
-    this.entry(item.id).authorClasses.delete(cls);
+    if (this.items.get(item.id)?.authorClasses.delete(cls) !== true) return;
     this.changed(item.id);
   }
 
@@ -135,7 +163,7 @@ export class Decorations {
           if (old instanceof Element) old.remove();
         } else keep.push(ref);
       }
-      this.retired.set(item.id, keep);
+      this.keepRetired(item.id, keep);
     }
     if (kind) {
       const at = list.findIndex((n) => kindOf(n) === kind);
@@ -151,8 +179,38 @@ export class Decorations {
     this.changed(item.id);
   }
 
+  /**
+   * Take every decoration of one kind (its first `rescue-*` class) off every item and off the
+   * page, including those remembered from before a route change: a module switched off live.
+   */
+  removeKind(kind: string): void {
+    for (const [id, e] of this.items) {
+      let touched = false;
+      for (const [slot, nodes] of e.slots) {
+        const keep = nodes.filter((n) => kindOf(n) !== kind);
+        if (keep.length === nodes.length) continue;
+        for (const n of nodes) if (kindOf(n) === kind && n instanceof Element) n.remove();
+        e.slots.set(slot, keep);
+        touched = true;
+      }
+      if (touched) this.changed(id);
+    }
+    for (const [id, refs] of this.retired) {
+      const keep: Array<WeakRef<Node>> = [];
+      for (const ref of refs) {
+        const n = ref.deref();
+        if (!n) continue;
+        if (kindOf(n) === kind && n instanceof Element) n.remove();
+        else keep.push(ref);
+      }
+      this.keepRetired(id, keep);
+    }
+  }
+
   addClass(item: ItemLike, cls: string): void {
-    this.entry(item.id).classes.add(cls);
+    const classes = this.entry(item.id).classes;
+    if (classes.has(cls)) return;
+    classes.add(cls);
     this.changed(item.id);
   }
 
@@ -180,12 +238,37 @@ export class Decorations {
     for (const [id, e] of this.items) {
       const kept = (this.retired.get(id) ?? []).filter((r) => r.deref() !== undefined);
       for (const nodes of e.slots.values()) for (const n of nodes) kept.push(new WeakRef(n));
-      this.retired.set(id, kept);
+      this.keepRetired(id, kept);
+    }
+    // Items of earlier page views that never came back: drop the references the browser has
+    // already collected, and the ids left with none (the map grew with every page view).
+    for (const [id, refs] of this.retired) {
+      if (this.items.has(id)) continue;
+      this.keepRetired(
+        id,
+        refs.filter((r) => r.deref() !== undefined),
+      );
     }
     this.items.clear();
+    this.pending.clear();
+  }
+
+  /** How many items have nodes remembered from before a route change (tests). */
+  retiredCount(): number {
+    return this.retired.size;
+  }
+
+  private keepRetired(id: string, refs: Array<WeakRef<Node>>): void {
+    if (refs.length) this.retired.set(id, refs);
+    else this.retired.delete(id);
   }
 
   private changed(id: string): void {
+    if (this.batching) this.pending.add(id);
+    else this.notify(id);
+  }
+
+  private notify(id: string): void {
     for (const fn of this.listeners) fn(id);
   }
 }
@@ -201,6 +284,8 @@ export interface LayoutHooks {
   markAuthor(item: ItemLike, cls: string): void;
   unmarkAuthor(item: ItemLike, cls: string): void;
   decorate(item: ItemLike, slot: Slot, node: Node): void;
+  /** Remove every decoration of this kind (first `rescue-*` class) from the page (dispose). */
+  removeDecorations(kind: string): void;
   addClass(item: ItemLike, cls: string): void;
   setRevealHidden(on: boolean): void;
 }

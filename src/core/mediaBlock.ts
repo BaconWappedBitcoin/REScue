@@ -11,6 +11,7 @@
  * background wires it to the real browser.
  */
 import { C } from '../contracts/reddit';
+import { isModuleEnabled, normalizeProfile } from './settings';
 
 /**
  * What "Block media downloads" asks for. Firefox already holds declarativeNetRequestWithHostAccess
@@ -78,11 +79,10 @@ export function wantsBlocking(o: BlockOptions): boolean {
 
 /** Does the stored settings profile ask for blocking? The module's own switch must be on too. */
 export function profileWantsBlocking(settings: unknown, moduleId = 'inlineMedia'): boolean {
-  const mod = (settings as { modules?: Record<string, unknown> } | undefined)?.modules?.[
-    moduleId
-  ] as { enabled?: unknown; options?: BlockOptions } | undefined;
-  if (!mod || mod.enabled === false) return false;
-  return wantsBlocking(mod.options ?? {});
+  const profile = normalizeProfile(settings);
+  // inlineMedia is on by default; the background has no module list, so its default is named here.
+  if (!isModuleEnabled({ id: moduleId, enabledByDefault: true }, profile)) return false;
+  return wantsBlocking((profile.modules[moduleId]?.options ?? {}) as BlockOptions);
 }
 
 export type BlockState = 'off' | 'active' | 'needs-permission';

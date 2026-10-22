@@ -98,6 +98,11 @@ export class SortTabs {
   }
 
   /** Remove the tabs and give Reddit's own dropdown back. */
+  /** REScue's tabs were drawn and has since been taken out of the page (Reddit re-rendered there). */
+  gone(): boolean {
+    return !!this.nav && !this.nav.isConnected;
+  }
+
   clear(doc: Document = document): void {
     this.nav?.remove();
     this.nav = null;

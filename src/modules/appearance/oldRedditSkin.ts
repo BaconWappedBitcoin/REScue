@@ -161,6 +161,7 @@ export const oldRedditSkin = defineModule({
     applyFeedTabs(ctx.options);
     setStyle(SKIN_STYLE_ID, oldSkinCss(ctx.options as OldSkinOptions));
     applySkinAttribute(ctx.route);
+    mount?.settingsChanged();
     syncMount(ctx as unknown as Ctx, ctx.route);
   },
 

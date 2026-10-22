@@ -5,6 +5,8 @@ import { readComments } from '../../src/modules/comments/readComments';
 import {
   ReadStore,
   closeReadStore,
+  openReadStore,
+  sharedReadStore,
   isNewComment,
   newCommentCount as countNew,
   recordVisit,
@@ -224,5 +226,20 @@ describe('newCommentCount on a listing', () => {
 describe('newCommentCount without readComments', () => {
   it('is switched off by the registry through dependsOn', () => {
     expect(newCommentCount.dependsOn).toEqual(['readComments']);
+  });
+});
+
+describe('closeReadStore', () => {
+  it('is not undone by a load still in flight', async () => {
+    let release: (v: unknown) => void = () => {};
+    const data = {
+      get: () => new Promise((r) => (release = r)),
+      set: () => {},
+    } as never;
+    const opening = openReadStore(data);
+    closeReadStore();
+    release({});
+    await opening;
+    expect(sharedReadStore()).toBeNull();
   });
 });

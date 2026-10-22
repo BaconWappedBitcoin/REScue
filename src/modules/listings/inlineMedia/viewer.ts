@@ -244,7 +244,8 @@ function syncPlayer(rec: Rec, o: Opts): void {
 
 function syncResolution(rec: Rec, o: Opts): void {
   if (!rec.res) return;
-  // The original size comes from Reddit's /api/info.json, asked only while the option is on.
+  // The original size comes from Reddit's thread JSON (originalSizes.ts), asked only while the
+  // option is on.
   if (o.displayOriginalResolution) state?.sizes.want(rec.post.id);
   const text = o.displayOriginalResolution
     ? resolutionOf(

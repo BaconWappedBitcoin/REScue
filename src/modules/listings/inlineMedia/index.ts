@@ -41,6 +41,8 @@ import { blockingRequest, shouldAsk } from './blocking';
 import { CommentMedia } from './commentMedia';
 import { writeMirror } from './earlyStyle';
 import { highlightCss, SENSITIVE_ATTR, sensitiveOf } from './highlight';
+import { registerMediaKeys, setMediaStepHost } from './mediaKeys';
+import { mediaStepHost } from './mediaSteps';
 import { OPTIONS } from './options';
 import {
   commentMediaHidden,
@@ -302,8 +304,13 @@ function selectedCommentWithMedia(): Element | undefined {
 }
 
 function registerKeys(ctx: ModuleContext): void {
+  // The gallery and mute keys ( [ ] m ) live with the other media keys (mediaKeys.ts); this module
+  // tracks the selected post, so it is what they act on (mediaSteps.ts). The host is set on every
+  // start (dispose clears it, and the keys API outlives the module), and reads the live context.
+  setMediaStepHost(mediaStepHost(() => state?.ctx ?? null));
   if (keysOn === ctx.keys) return;
   keysOn = ctx.keys;
+  registerMediaKeys(ctx.keys);
   // Neither key is used by keyboardNav, voting or the go commands. Both decline (letting Reddit's
   // own handler have the key) when there is nothing for them to act on.
   ctx.keys.register({
@@ -354,7 +361,7 @@ export const inlineMedia = defineModule({
   category: 'listings',
   title: 'Hide inline media',
   description:
-    'Hides the pictures, GIFs and videos inside comments, each behind a word in its place (“show image”, “show GIF”, “show video”) that shows it again, and “hide …” puts it away. It is hidden before you see it and stays hidden when you refresh or when more comments load. X shows or hides the media of the selected comment (or post); Shift+X does every comment and post on the page. The switch is also in the REScue menu. Posts are left alone unless you switch on “Also hide the post’s own picture or video”, which hides the post’s media behind a word after its time. Only the media’s own wrapper is hidden; nothing inside Reddit’s players is touched. Off by default.',
+    'Hides the pictures, GIFs and videos inside comments, each behind a word in its place (“show image”, “show GIF”, “show video”) that shows it again, and “hide …” puts it away. It is hidden before you see it and stays hidden when you refresh or when more comments load. X shows or hides the media of the selected comment (or post); Shift+X does every comment and post on the page. With a gallery post selected, [ and ] show the previous and next picture of Reddit’s own slideshow and m mutes or unmutes its video, by pressing Reddit’s own buttons; the keys do nothing on a post without a gallery or video. The switch is also in the REScue menu. Posts are left alone unless you switch on “Also hide the post’s own picture or video”, which hides the post’s media behind a word after its time. Only the media’s own wrapper is hidden; nothing inside Reddit’s players is touched. Off by default.',
   enabledByDefault: true,
   options: OPTIONS,
 
@@ -462,6 +469,7 @@ export const inlineMedia = defineModule({
   dispose() {
     const s = state;
     state = null;
+    setMediaStepHost(null);
     if (!s) return;
     for (const e of s.entries.values()) {
       e.post.source.removeAttribute(MEDIA_ATTR);

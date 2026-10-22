@@ -9,7 +9,7 @@
 import { C } from '../../../contracts/reddit';
 import type { Route } from '../../../core/types';
 import { watchCommentRows } from '../../../model/commentRow';
-import { CommentView } from './comment';
+import { CommentView, commentPrefs, type CommentPrefs } from './comment';
 import { PostView } from './post';
 import { isOwn, type Ctx } from './shared';
 import { HighlightRows } from './highlights';
@@ -37,6 +37,15 @@ export class SkinMount {
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private retryTimer: ReturnType<typeof setInterval> | null = null;
   private retries = 0;
+  /**
+   * The route changed since the last flush. The sort tabs, the highlight rows, the page name and
+   * the posts still waiting are only looked at again when posts were queued or the route changed
+   * (or one of those pieces was taken out of the page), so a flush of comments alone skips those
+   * document-wide reads.
+   */
+  private routeChanged = true;
+  private prefs: CommentPrefs | null = null;
+  private readonly currentPrefs = (): CommentPrefs => (this.prefs ??= commentPrefs(this.ctx));
 
   constructor(
     private readonly ctx: Ctx,
@@ -54,7 +63,10 @@ export class SkinMount {
       attributes: true,
       attributeFilter: WATCHED,
     });
-    this.stopRows = watchCommentRows((host) => this.comments.get(host)?.render());
+    this.stopRows = watchCommentRows((host) =>
+      this.quietly(() => this.comments.get(host)?.render()),
+    );
+    this.routeChanged = true;
     this.sweep();
   }
 
@@ -62,8 +74,25 @@ export class SkinMount {
   setRoute(route: Route): void {
     this.route = route;
     if (!this.observer) return;
+    this.routeChanged = true;
     this.sweep();
     for (const v of this.posts.values()) v.render();
+  }
+
+  /** A setting changed (this module's or another's): comments read the settings they use again. */
+  settingsChanged(): void {
+    this.prefs = null;
+  }
+
+  /**
+   * Runs REScue's own writes to the page, then drops the records they made, so the skin's own
+   * changes never queue its items again (a comment it remounts would otherwise be remounted
+   * forever). Only used in REScue's own timer tasks: records made by Reddit were all delivered before
+   * such a task began.
+   */
+  private quietly(run: () => void): void {
+    run();
+    this.observer?.takeRecords();
   }
 
   stop(): void {
@@ -92,7 +121,8 @@ export class SkinMount {
   }
 
   private sweep(): void {
-    for (const el of document.querySelectorAll(`${POST_HOSTS}, ${COMMENT_HOSTS}`)) this.queued.add(el);
+    for (const el of document.querySelectorAll(`${POST_HOSTS}, ${COMMENT_HOSTS}`))
+      this.queued.add(el);
     this.schedule();
   }
 
@@ -103,7 +133,8 @@ export class SkinMount {
         continue;
       }
       const own = [...r.addedNodes, ...r.removedNodes].every(isOwn);
-      if (own && r.addedNodes.length + r.removedNodes.length > 0 && r.removedNodes.length === 0) continue;
+      if (own && r.addedNodes.length + r.removedNodes.length > 0 && r.removedNodes.length === 0)
+        continue;
       const target = r.target instanceof Element ? r.target : r.target.parentElement;
       const host = target?.closest(HOSTS);
       if (host) this.queued.add(host);
@@ -119,19 +150,24 @@ export class SkinMount {
   private schedule(): void {
     this.flushTimer ??= setTimeout(() => {
       this.flushTimer = null;
-      this.flush();
+      this.quietly(() => this.flush());
     }, 30);
   }
 
   private flush(): void {
     const hosts = [...this.queued];
     this.queued.clear();
+    let posts = this.routeChanged;
     for (const host of hosts) {
       if (!host.isConnected) continue;
-      if (host.matches(POST_HOSTS)) this.ensurePost(host);
-      else if (host.matches(COMMENT_HOSTS)) this.ensureComment(host);
+      if (host.matches(POST_HOSTS)) {
+        posts = true;
+        this.ensurePost(host);
+      } else if (host.matches(COMMENT_HOSTS)) this.ensureComment(host);
     }
     this.prune();
+    if (!posts && !this.tabs.gone() && !this.highlights.gone() && !this.pageName.gone()) return;
+    this.routeChanged = false;
     this.tabs.sync(this.route);
     this.highlights.sync();
     this.pageName.sync(this.route);
@@ -153,7 +189,7 @@ export class SkinMount {
   private ensureComment(host: Element): void {
     let view = this.comments.get(host);
     if (!view) {
-      view = CommentView.mount(host, this.ctx) ?? undefined;
+      view = CommentView.mount(host, this.ctx, this.currentPrefs) ?? undefined;
       if (!view) return;
       this.comments.set(host, view);
       return;
@@ -195,7 +231,9 @@ export class SkinMount {
     this.retryTimer = setInterval(() => {
       this.retries++;
       const todo = this.pending();
-      for (const el of todo) this.ensurePost(el);
+      this.quietly(() => {
+        for (const el of todo) this.ensurePost(el);
+      });
       if (!this.pending().length || this.retries >= RETRY_MAX) this.stopRetry();
     }, RETRY_MS);
   }

@@ -94,10 +94,20 @@ export class KeyDispatcher {
   private pending: { chord: string; timer: ReturnType<typeof setTimeout> } | null = null;
   private readonly onKey = (e: KeyboardEvent) => this.handle(e);
 
-  register(cmd: Command): void {
+  /**
+   * Adds a command; the returned function removes it again (a module's dispose, so switching the
+   * module back on can register it afresh). It only removes this registration, never a later one
+   * that reused the id.
+   */
+  register(cmd: Command): () => void {
     if (this.commands.has(cmd.id)) throw new Error(`Duplicate command: ${cmd.id}`);
     this.commands.set(cmd.id, cmd);
     this.rebuild();
+    return () => {
+      if (this.commands.get(cmd.id) !== cmd) return;
+      this.commands.delete(cmd.id);
+      this.rebuild();
+    };
   }
 
   setOverrides(overrides: Record<string, string[]>): void {

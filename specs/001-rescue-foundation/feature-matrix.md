@@ -71,7 +71,7 @@ own data (filters, user tags, keyboard navigation, local dates) work there too (
 | disableChat | Adapted | ◐ | US8 | Hides chat entry points and the unread badge in the header with a REScue stylesheet (candidate `chrome.chatEntry`). Does not block chat's scripts as RES did: Infeasible |
 | userbarHider | Built-in | — | — | Reddit's collapsible navigation |
 | usernameHider | Ported | ◐ | US8 | Screenshot mode: masks your name (and listed names) in post and comment author links, with a reversible text swap. Verified signed in 2026-10-15: the header/user-menu never shows your name as light-DOM text (it is inside Reddit's components), so it stays visible there |
-| nightMode | Built-in | — | — | Reddit's dark mode; RES's night-mode scheduling is Deferred (needs flipping Reddit's own theme setting) |
+| nightMode | Adapted | ◐ | US8 | The schedule RES could not have: `nightMode` flips Reddit's own `theme-dark` class on `<html>` for this tab only, never the account setting (never dark / always dark / follow the computer / between two times of day, with the reader's own switch honoured for `nightModeOverrideHours` hours). Reddit's own dark-mode switch and per-subreddit stylesheets are Built-in or Obsolete |
 | stylesheet (custom CSS) | Ported | ✓ | US8 | One `<style id="rescue-user-css">`, applied live and removed when off. Subreddit stylesheets and snippet/custom-toggle links: Infeasible |
 | subredditStyleToggle | Infeasible | — | — | Modern Reddit has no per-subreddit CSS |
 | hover (popup framework) | Adapted | ✓ | US5 | Infrastructure for REScue popups; T147 adds the "Hover popups" settings (open/fade delays, fade time, width, close on mouse-out, per-popup overrides) used by the show-parent popup |
@@ -95,8 +95,8 @@ own data (filters, user tags, keyboard navigation, local dates) work there too (
 | neverEndingComments | Built-in | — | — | Reddit's "more replies" (REScue's `n` key lives in keyboardNav) |
 | saveComments (RES-local save) | Adapted | ✓ | US6 | Local snapshot of the body |
 | sourceSnudown (view source) | Deferred | — | — | No raw markdown in the page; same-origin item .json (constitution 2.1.0, R20) is a candidate route |
-| commentPreview | Built-in | — | — | Reddit's composer previews as you type; RES's Big Editor is Deferred (composer) |
-| commentTools | Deferred | — | — | Reddit's toolbar covers formatting; RES's macros, commenting-as, autocomplete and extra shortcuts have no native equivalent and need composer access (Deferred) |
+| commentPreview | Built-in | — | — | Reddit's composer previews as you type; RES's Big Editor is built in the commentTools module |
+| commentTools | Adapted | ✓ | — | Reddit's toolbar covers formatting. Module `commentTools`: a bar before each comment box with text macros (inserted at the caret through the bridge, RES placeholders), "commenting as u/you", and RES commentPreview's big editor (Markdown box + live preview, Ctrl+E; Save switches Reddit's box to Markdown and fills it, never posts). Autocomplete and the extra formatting keys are not built |
 | userHighlight | Adapted | ✓ | US5 | Reddit marks OP; REScue adds moderator (`is-mod-distinguished`, verified), friend and tagged highlights on the author link; admin marker unverified |
 | userTagger | Adapted | ✓ | US5 | Tags beside the author link; ignored posts are hidden, ignored comments collapse their own body (replies stay) |
 
@@ -134,9 +134,9 @@ own data (filters, user tags, keyboard navigation, local dates) work there too (
 | Status | Count |
 |---|---|
 | Ported | 13 |
-| Adapted | 44 |
-| Built-in | 9 |
-| Deferred | 9 |
+| Adapted | 46 |
+| Built-in | 8 |
+| Deferred | 8 |
 | Infeasible | 6 |
 | **Total** | **81** |
 

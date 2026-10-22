@@ -97,7 +97,12 @@ export class Selection {
     if (known) {
       // Reddit re-rendered the item: the new element takes its place.
       this.items[this.items.indexOf(known)] = item;
-      if (this.currentItem === known) this.currentItem = item;
+      if (this.currentItem === known) {
+        // The outline follows the new element (and watches its size instead of the old one's).
+        this.currentItem = item;
+        host.setAttribute(SELECTED_ATTR, '');
+        this.view.show(item, false);
+      }
     } else {
       const last = this.items[this.items.length - 1];
       if (last && byDocument(last, item) > 0) this.outOfOrder = true;

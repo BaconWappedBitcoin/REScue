@@ -409,4 +409,27 @@ describe('the page name beside the logo', () => {
     expect(r('https://www.reddit.com/')).toBeNull();
     expect(r('https://www.reddit.com/user/someone/')).toBeNull();
   });
+
+  it('stays on one line, cut with an ellipsis, and goes away on a narrow window', () => {
+    const css = oldSkinCss(DEFAULTS);
+    const rule = /\.rescue-opagename \{[^}]*\}/.exec(css)![0];
+    for (const want of ['white-space: nowrap', 'text-overflow: ellipsis', 'overflow: hidden'])
+      expect(rule).toContain(want);
+    expect(rule).toMatch(/max-width: \d+px/);
+    expect(css).toMatch(
+      /@media \(max-width: 599px\) \{ [^{]*\.rescue-opagename \{ display: none; \} \}/,
+    );
+  });
+});
+
+describe('galleries in feeds', () => {
+  it('hide the zoomed-down strip and show the placeholder thumbnail instead', () => {
+    const css = oldSkinCss(DEFAULTS);
+    expect(css).toMatch(
+      /:has\(> div\[slot="post-media-container"\] gallery-carousel\) > div\[slot="post-media-container"\] \{ display: none !important; \}/,
+    );
+    expect(css).toMatch(
+      /:has\(> div\[slot="post-media-container"\] gallery-carousel\) > \.rescue-oth \{ display: block !important/,
+    );
+  });
 });

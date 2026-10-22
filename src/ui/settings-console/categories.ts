@@ -92,6 +92,7 @@ const BY_RES_ID: Record<string, ConsoleCategory> = {
   styleTweaks: 'appearance',
   commentStyle: 'appearance',
   quarantineHide: 'appearance',
+  nightMode: 'appearance',
   keyboardNav: 'browsing',
   logoLink: 'browsing',
   pageNavigator: 'browsing',
@@ -124,7 +125,10 @@ const BY_MODULE_ID: Record<string, ConsoleCategory> = {
   interstitials: 'browsing',
   oldRedditRedirect: 'browsing',
   linksNewTab: 'comments',
+  commentTools: 'comments',
   threadSubscriptions: 'comments',
+  // RES sourceSnudown's "source" button (feature-matrix row still Deferred, so no resId).
+  showSource: 'comments',
   hideLinks: 'submissions',
   hoverCardActions: 'users',
   importBlocked: 'users',

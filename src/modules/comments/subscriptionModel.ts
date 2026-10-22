@@ -26,7 +26,7 @@ export type SubMap = Record<string, Sub>;
 
 export const DAY_MS = 86_400_000;
 export const MAX_SUBS = 200;
-const FULLNAME = /^t3_[a-z0-9]{1,10}$/i;
+const FULLNAME = /^t3_[a-z0-9]{1,16}$/i;
 
 /** A same-origin path for a thread permalink, or null when it is anything else. */
 export function threadPath(permalink: unknown): string | null {

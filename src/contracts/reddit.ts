@@ -9,7 +9,8 @@
  * were measured by REScue research (specs/001-rescue-foundation/research.md) on 2026-10-15.
  */
 
-export type ContractStatus = 'verified' | 'inherited' | 'candidate';
+/** `retired`: Reddit stopped serving it; kept for the record, nothing may use it. */
+export type ContractStatus = 'verified' | 'inherited' | 'candidate' | 'retired';
 export type ContractKind = 'selector' | 'attribute' | 'endpoint' | 'header' | 'text-pattern';
 export type Host = 'www' | 'sh';
 
@@ -33,6 +34,10 @@ export const C = {
   // Dark mode is the class `theme-dark` on <html> (`html.theme-beta.theme-dark`, computed
   // `color-scheme: dark`); light is `html.theme-beta` alone (`color-scheme: light`).
   themeDarkClass: 'theme-dark',
+  // Reddit's own Display Mode switch in the user menu (VERIFIED LIVE 2026-10-21): the menu row
+  // `li#darkmode-list-item` holds a `shreddit-theme-switcher`. Night mode counts only a click or key
+  // on this as the reader choosing a theme by hand.
+  themeSwitch: '#darkmode-list-item, shreddit-theme-switcher',
   // --- end theme ---------------------------------------------------------------------------------
   rightSidebar: '#right-sidebar-container',
   header: 'reddit-header-large',
@@ -251,6 +256,21 @@ export const C = {
   },
 
   /**
+   * Edited marker (verified live 2026-10-21). Inside a comment's own `commentMeta` slot, Reddit
+   * adds a span whose own text (before the timeago) is "Edited", followed by a `faceplate-timeago`
+   * whose `ts` attribute holds the last-edited instant. The comment element itself only carries
+   * `created`; there is no edited attribute, so the meta slot is the only source.
+   */
+  edited: {
+    meta: '[slot="commentMeta"]',
+    /** The marker span; which span it is comes from its own text (spanText), not its classes. */
+    span: 'span',
+    spanText: /^\s*Edited\s*$/i,
+    /** Its last-edited instant is this element's `ts` (C.time.tsAttr). */
+    timeago: 'faceplate-timeago',
+  },
+
+  /**
    * Page chrome REScue may reach in the LIGHT DOM (US8). logoLink (`a#reddit-logo`), searchForm,
    * searchInput and chatEntry were VERIFIED live on 2026-10-15 (signed in, www.; the header's own
    * shadow root is open, but these nodes are light DOM). The rest are CANDIDATES, so a module that
@@ -269,6 +289,11 @@ export const C = {
     chatEntry:
       '#header-action-item-chat-button, #header-action-item-chat-button-badge, #reddit-chat',
     userMenu: 'reddit-header-large, user-drawer-app, [id*="user-drawer" i]',
+    // A profile page names its user in light-DOM text here (verified live 2026-10-21): the big and
+    // compact headers, the "u/name" line, and the search box's "u/name" chip.
+    profileNames:
+      '[data-testid="profile-display-name"], [data-testid="profile-display-name-compact"], ' +
+      '[data-testid="profile-prefixed-name"], #search-input-chip',
     visitedLinks: 'shreddit-post a[href*="/comments/"]:visited',
     topLevelComment: 'shreddit-comment[depth="0"]',
     // Gap build H1 (T146), CANDIDATE: the post's title slot in the light DOM (R17 saw it).
@@ -601,12 +626,51 @@ export const C = {
       'button[part="share-button"], [slot="ssr-share-button"] button, button[aria-label*="share" i]',
     modalScrollLock: 'rpl-scroll-lock',
   },
+  /**
+   * Media controls (verified live 2026-10-21, www., LibreWolf): the gallery arrows and the video
+   * mute button are Reddit's OWN controls, pressed through the bridge the way a vote presses
+   * Reddit's vote buttons. A gallery post holds a light-DOM `gallery-carousel` somewhere inside
+   * the post whose OPEN shadow root carries the two arrow buttons by these aria-labels (in feeds
+   * they can be tiny or hidden; a programmatic .click() still works — on the post's own page they
+   * are normal size). A video post holds `shreddit-player` (a `shreddit-player-2` build is
+   * accepted too) with an open shadow root — its controls may sit in nested open roots — and its
+   * mute control is the "Toggle volume" button (its neighbours read "Play", "Toggle playback",
+   * "Toggle captions", "Settings", "Toggle fullscreen").
+   */
+  mediaControls: {
+    /** The gallery host whose open shadow root holds the two arrows. */
+    gallery: 'gallery-carousel',
+    galleryPrev: 'button[aria-label="Previous page"]',
+    galleryNext: 'button[aria-label="Next page"]',
+    /** The video player host (two builds were live at once, so both are accepted). */
+    player: 'shreddit-player, shreddit-player-2',
+    mute: 'button[aria-label="Toggle volume"]',
+  },
   composer: {
     host:
       'comment-composer-host, shreddit-composer, ' +
       'shreddit-async-loader[bundlename*="composer" i], faceplate-form[action*="comment" i]',
     editor: 'textarea, [data-lexical-editor], [contenteditable="true"], [contenteditable=""]',
     submit: 'button[type="submit"], [slot="submit-button"], button[slot*="submit" i]',
+  },
+  /**
+   * Composer (verified live 2026-10-21, www., LibreWolf, signed in), for comment tools. Pressing a
+   * comment's Reply opens a light-DOM `comment-composer-host` (attributes `post-id`, `parent-id`,
+   * `reply-mode`) inside that comment's subtree; the reply-to-the-post box at the top of a thread
+   * is one too. It holds a `shreddit-composer` whose `mode` attribute is "richText" by default.
+   * The editable box sits in open shadow roots: `div[contenteditable=true][data-lexical-editor]`
+   * (name="body") in rich-text mode, a plain text box (a textarea is expected) in Markdown mode.
+   * The toolbar's mode switch is a button (and a span) labelled "Switch to Markdown".
+   */
+  composerTools: {
+    host: 'comment-composer-host',
+    composer: 'shreddit-composer',
+    modeAttr: 'mode',
+    markdownMode: /markdown/i,
+    richEditor: '[data-lexical-editor]',
+    plainEditor: 'textarea',
+    switchButton: 'button',
+    switchLabel: /^\s*switch to markdown\s*$/i,
   },
   ageGate: {
     host: '.configured-xpromo-modal',
@@ -657,10 +721,21 @@ export const C = {
    */
   json: {
     mine: '/subreddits/mine.json',
+    // RETIRED 2026-10-21 (verified live, signed in, same-origin fetch with the session):
+    // `?id=t1_…` and `?id=t3_…`, with or without raw_json=1, answer HTTP 403 text/html. Kept for
+    // the record only; nothing calls it. Its readers moved to `comments` below.
     info: '/api/info.json',
+    // A thread: `[postListing, commentListing]` (verified live 2026-10-21, signed in, HTTP 200).
+    // With raw_json=1&limit=1&depth=0 the post (`name`, `selftext` as raw Markdown, `num_comments`,
+    // `preview`, `edited`) costs one small request. redditJson.ts can also ask for one comment's
+    // own thread, `/comments/<post>/_/<comment>.json` (limit=1&depth=1): the second listing's
+    // first child is that comment (`kind: 't1'`, `name`, `body` raw Markdown, `edited`).
     comments: '/comments/{id}.json',
     me: '/api/me.json',
     blocked: '/prefs/blocked.json',
+    // The reader's own custom feeds (a bare JSON array of LabeledMulti; `path` without a trailing
+    // slash). Verified live 2026-10-21, signed in: HTTP 200. Used by the shortcut bar's feeds menu.
+    multis: '/api/multi/mine.json',
   },
 
   hover: {
@@ -701,6 +776,16 @@ export const CONTRACTS: PageContract[] = [
     status: 'verified',
     verifiedAt: '2026-10-15',
     usedBy: 'core',
+  },
+  // Reddit's Display Mode switch, verified live 2026-10-21 (nightMode's manual-override signal).
+  {
+    key: 'theme.switch',
+    kind: 'selector',
+    value: C.themeSwitch,
+    required: false,
+    status: 'verified',
+    verifiedAt: '2026-10-21',
+    usedBy: ['nightMode'],
   },
   {
     key: 'feed',
@@ -989,6 +1074,43 @@ export const CONTRACTS: PageContract[] = [
     status: 'candidate',
     usedBy: ['keyboardActions', 'autoHide', 'hideLinks'],
   },
+  // --- Media controls (this lane, verified live 2026-10-21, www., LibreWolf) ----------------------
+  {
+    key: 'mediaControls.gallery',
+    kind: 'selector',
+    value: `${C.post} ${C.mediaControls.gallery}`,
+    required: false,
+    status: 'verified',
+    verifiedAt: '2026-10-21',
+    usedBy: ['inlineMedia'],
+  },
+  {
+    key: 'mediaControls.galleryArrows',
+    kind: 'selector',
+    value: `${C.mediaControls.galleryPrev}, ${C.mediaControls.galleryNext}`,
+    required: false,
+    status: 'verified',
+    verifiedAt: '2026-10-21',
+    usedBy: ['inlineMedia'],
+  },
+  {
+    key: 'mediaControls.player',
+    kind: 'selector',
+    value: `${C.post} ${C.mediaControls.player}`,
+    required: false,
+    status: 'verified',
+    verifiedAt: '2026-10-21',
+    usedBy: ['inlineMedia'],
+  },
+  {
+    key: 'mediaControls.mute',
+    kind: 'selector',
+    value: C.mediaControls.mute,
+    required: false,
+    status: 'verified',
+    verifiedAt: '2026-10-21',
+    usedBy: ['inlineMedia'],
+  },
   {
     key: 'post.locked',
     kind: 'attribute',
@@ -1141,22 +1263,24 @@ export const CONTRACTS: PageContract[] = [
     usedBy: ['subredditManager'],
   },
   {
+    // Retired 2026-10-21: HTTP 403 text/html for a signed-in reader (verified live). Unused.
     key: 'json.info',
     kind: 'endpoint',
     value: C.json.info,
     required: false,
-    status: 'verified',
-    verifiedAt: '2026-10-15',
-    usedBy: ['threadSubscriptions'],
+    status: 'retired',
+    verifiedAt: '2026-10-21',
+    usedBy: [],
   },
   {
+    // The post-only form and one comment's thread (`/_/<comment>`), verified live 2026-10-21.
     key: 'json.comments',
     kind: 'endpoint',
     value: C.json.comments,
     required: false,
     status: 'verified',
-    verifiedAt: '2026-10-15',
-    usedBy: [],
+    verifiedAt: '2026-10-21',
+    usedBy: ['threadSubscriptions', 'showSource', 'mediaViewer'],
   },
   {
     key: 'json.me',
@@ -1175,6 +1299,15 @@ export const CONTRACTS: PageContract[] = [
     status: 'verified',
     verifiedAt: '2026-10-15',
     usedBy: ['userTagger'],
+  },
+  {
+    key: 'json.multis',
+    kind: 'endpoint',
+    value: C.json.multis,
+    required: false,
+    status: 'verified',
+    verifiedAt: '2026-10-21',
+    usedBy: ['subredditManager'],
   },
   {
     key: 'ageGate.confirm',
@@ -1307,6 +1440,33 @@ export const CONTRACTS: PageContract[] = [
     usedBy: ['localDate'],
   },
   {
+    key: 'comment.edited',
+    kind: 'selector',
+    value: `${C.edited.meta} ${C.edited.span}`,
+    required: false,
+    status: 'candidate',
+    verifiedAt: '2026-10-21',
+    usedBy: ['oldRedditSkin'],
+  },
+  {
+    key: 'comment.edited.text',
+    kind: 'text-pattern',
+    value: C.edited.spanText,
+    required: false,
+    status: 'candidate',
+    verifiedAt: '2026-10-21',
+    usedBy: ['oldRedditSkin'],
+  },
+  {
+    key: 'comment.edited.ts',
+    kind: 'attribute',
+    value: C.time.tsAttr,
+    required: false,
+    status: 'candidate',
+    verifiedAt: '2026-10-21',
+    usedBy: ['oldRedditSkin'],
+  },
+  {
     key: 'search.params',
     kind: 'attribute',
     value: Object.values(C.searchParams).join(','),
@@ -1347,6 +1507,15 @@ export const CONTRACTS: PageContract[] = [
     value: C.chrome.userMenu,
     required: false,
     status: 'candidate',
+    usedBy: ['usernameHider'],
+  },
+  {
+    key: 'chrome.profileNames',
+    kind: 'selector',
+    value: C.chrome.profileNames,
+    required: false,
+    status: 'verified',
+    verifiedAt: '2026-10-21',
     usedBy: ['usernameHider'],
   },
   {
@@ -1477,8 +1646,8 @@ export function contractStatus(key: string): ContractStatus | undefined {
   return CONTRACTS.find((c) => c.key === key)?.status;
 }
 
-/** A candidate with no captured value is unusable; callers treat it as absent. */
+/** A candidate with no captured value, or a retired entry, is unusable; callers treat it as absent. */
 export function contractUsable(key: string): boolean {
   const c = CONTRACTS.find((x) => x.key === key);
-  return !!c && c.status !== 'candidate' && c.value !== '';
+  return !!c && c.status !== 'candidate' && c.status !== 'retired' && c.value !== '';
 }

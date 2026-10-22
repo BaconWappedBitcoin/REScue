@@ -6,11 +6,14 @@
  * to `save`, which writes the `subreddits` table option; the bar redraws when the settings return.
  * Ported in spirit from RES lib/modules/subredditManager.js (GPL-3.0, the RES contributors,
  * commit 4defffc); the code is new. All text is placed with the DOM builder, never as markup.
+ * The arrows and the sort menu are in shortcutControls.ts, the mail and feeds words in barMenus.ts.
  */
 import { h } from '../../core/dom';
 import { hint, label } from '../../core/hints';
 import type { Route } from '../../core/types';
+import { closeMenus, menuWords, type MenuHost } from './barMenus';
 import { closeMine, openMine, type MineHost } from './shortcutMine';
+import { arrow, closeSort, placeAbove, sortControl, updateArrows } from './shortcutControls';
 import { closePopup, openPopup } from './shortcutPopup';
 import {
   addRow,
@@ -20,7 +23,6 @@ import {
   removeSubreddit,
   shortcutHref,
   shortcutItems,
-  SORT_MODES,
   sortRows,
   staticLinks,
   updateRow,
@@ -55,7 +57,6 @@ let pendingFocus: number | null = null;
 let hideTimer: ReturnType<typeof setTimeout> | undefined;
 let showTimer: ReturnType<typeof setTimeout> | undefined;
 let observer: ResizeObserver | null = null;
-let closeSortMenu: (() => void) | null = null;
 
 const rows = (): RawRow[] => live?.ctx.options.subreddits ?? [];
 
@@ -114,16 +115,6 @@ function openEdit(item: ShortcutItem, from: HTMLElement): void {
     },
     onDelete: () => commit(deleteRow(rows(), item.index)),
   });
-}
-
-/** Put a fixed-position menu just above its anchor (it must not be clipped by the scrolling list). */
-function placeAbove(menu: HTMLElement, anchor: HTMLElement): void {
-  menu.hidden = false; // it has to be laid out to be measured
-  const r = anchor.getBoundingClientRect();
-  const vw = document.documentElement.clientWidth;
-  const left = Math.min(r.left, vw - menu.offsetWidth - 8);
-  menu.style.left = `${Math.max(0, Math.round(left))}px`;
-  menu.style.bottom = `${Math.round(window.innerHeight - r.top + 2)}px`;
 }
 
 function hideGroupMenu(menu: HTMLElement): void {
@@ -259,63 +250,6 @@ function trashZone(): HTMLElement {
   return trash;
 }
 
-function sortControl(): { button: HTMLElement; menu: HTMLElement } {
-  const button = h(
-    'button',
-    {
-      type: 'button',
-      title: hint.shortcutSort,
-      'aria-label': 'Sort shortcuts',
-      'aria-haspopup': 'true',
-      'data-rescue-sort': '',
-    },
-    label.sort,
-  );
-  const menu = h(
-    'div',
-    { class: 'rescue-sc-menu', role: 'menu', hidden: true, 'data-rescue-sort-menu': '' },
-    ...SORT_MODES.filter(
-      (m) => m.mode !== 'visitDesc' || live?.ctx.options.storeSubredditVisit !== false,
-    ).map(({ mode, label }) => {
-      const b = h(
-        'button',
-        {
-          type: 'button',
-          role: 'menuitem',
-          'data-sort': mode,
-          title: hint.shortcutSortMode(label),
-        },
-        label,
-      );
-      b.addEventListener('click', () => {
-        closeSortMenu?.();
-        commit(sortRows(rows(), mode, live?.ctx.visits));
-      });
-      return b;
-    }),
-  );
-  button.addEventListener('click', () => {
-    if (!menu.hidden) return closeSortMenu?.();
-    placeAbove(menu, button);
-    menu.hidden = false;
-    const outside = (e: Event) => {
-      if (!menu.contains(e.target as Node) && e.target !== button) closeSortMenu?.();
-    };
-    const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeSortMenu?.();
-    };
-    document.addEventListener('mousedown', outside, true);
-    document.addEventListener('keydown', key, true);
-    closeSortMenu = () => {
-      menu.hidden = true;
-      document.removeEventListener('mousedown', outside, true);
-      document.removeEventListener('keydown', key, true);
-      closeSortMenu = null;
-    };
-  });
-  return { button, menu };
-}
-
 function toggleButton(sub: string): HTMLElement {
   const present = hasSubreddit(rows(), sub);
   const b = h(
@@ -330,35 +264,6 @@ function toggleButton(sub: string): HTMLElement {
   b.addEventListener('click', () =>
     commit(present ? removeSubreddit(rows(), sub) : addRow(rows(), `r/${sub}`, '', Date.now())),
   );
-  return b;
-}
-
-function updateArrows(bar: HTMLElement): void {
-  const vp = bar.querySelector<HTMLElement>('.rescue-sc-viewport');
-  const left = bar.querySelector<HTMLElement>('[data-dir="left"]');
-  const right = bar.querySelector<HTMLElement>('[data-dir="right"]');
-  if (!vp || !left || !right) return;
-  left.hidden = vp.scrollLeft <= 1;
-  right.hidden = vp.scrollLeft + vp.clientWidth >= vp.scrollWidth - 1;
-}
-
-function arrow(dir: 'left' | 'right', viewport: HTMLElement): HTMLElement {
-  const b = h(
-    'button',
-    {
-      type: 'button',
-      class: 'rescue-sc-arrow',
-      'data-dir': dir,
-      'aria-label': `Scroll shortcuts ${dir}`,
-      title: hint.shortcutArrow(dir),
-      hidden: true,
-    },
-    dir === 'left' ? label.scrollBack : label.scrollMore,
-  );
-  b.addEventListener('click', () => {
-    const step = Math.max(80, Math.round(viewport.clientWidth * 0.8));
-    viewport.scrollLeft += dir === 'left' ? -step : step;
-  });
   return b;
 }
 
@@ -388,9 +293,10 @@ function mineControl(mine: MineHost | undefined): HTMLElement | null {
   return b;
 }
 
-export function renderBar(ctx: BarCtx, save: SaveRows, mine?: MineHost): void {
+export function renderBar(ctx: BarCtx, save: SaveRows, mine?: MineHost, menus?: MenuHost): void {
   live = { ctx, save };
-  closeSortMenu?.();
+  closeSort();
+  closeMenus();
   const items = shortcutItems(ctx.options.subreddits);
   const statics = staticLinks(ctx.options, ctx.session);
   const sub = ctx.route.kind === 'subreddit' ? ctx.route.subreddit : undefined;
@@ -403,7 +309,10 @@ export function renderBar(ctx: BarCtx, save: SaveRows, mine?: MineHost): void {
 
   const viewport = h('div', { class: 'rescue-sc-viewport' });
   viewport.append(...statics.map((s) => link(s.text, s.href, hint.shortcutStatic(s.text))));
-  if (statics.length && items.length) {
+  // The mail and feeds words (barMenus.ts) follow the fixed links, before your own shortcuts.
+  const words = menuWords(menus);
+  viewport.append(...words);
+  if ((statics.length || words.length) && items.length) {
     viewport.append(h('span', { class: 'rescue-bar-sep', title: hint.shortcutSeparator }, '|'));
   }
   viewport.append(...items.map((i) => itemNode(i, parts)));
@@ -419,7 +328,10 @@ export function renderBar(ctx: BarCtx, save: SaveRows, mine?: MineHost): void {
     label.add,
   );
   add.addEventListener('click', () => openAdd(add));
-  const sort = sortControl();
+  const sort = sortControl({
+    showVisits: ctx.options.storeSubredditVisit !== false,
+    onSort: (mode) => commit(sortRows(rows(), mode, live?.ctx.visits)),
+  });
   const toggle = ctx.options.showAddCurrent && sub ? toggleButton(sub) : null;
 
   const bar =
@@ -461,7 +373,8 @@ export function renderBar(ctx: BarCtx, save: SaveRows, mine?: MineHost): void {
 
 export function removeBar(): void {
   closeMine();
-  closeSortMenu?.();
+  closeMenus();
+  closeSort();
   closePopup();
   clearTimeout(hideTimer);
   clearTimeout(showTimer);

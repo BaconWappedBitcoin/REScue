@@ -14,14 +14,17 @@ import {
   type SubMap,
 } from '../../src/modules/comments/subscriptionModel';
 import {
+  ROUND_MAX,
   SUBS_KEY,
+  roundOf,
   runCheck,
+  storageCursor,
   storageLock,
   type CheckLock,
   type PollDeps,
 } from '../../src/modules/comments/subscriptionPoller';
 import { threadSubscriptions } from '../../src/modules/comments/threadSubscriptions';
-import { infoListing } from '../fixtures/redditJson';
+import { commentsDoc } from '../fixtures/redditJson';
 import { mount, nestedThreadHtml } from '../fixtures/pages';
 import { bootModules, tick } from './module-harness';
 
@@ -148,10 +151,10 @@ function info(id: string, numComments: number) {
 describe('runCheck', () => {
   function rig(subs: SubMap, over: Partial<PollDeps> = {}) {
     let stored = subs;
-    const getJson = vi.fn(async (_k: string, p: { id: string[] }) => ({
+    const getJson = vi.fn(async (_k: string, p: { id: string }) => ({
       ok: true as const,
       cached: false,
-      data: { posts: p.id.map((id) => info(id, (subs[id]?.lastCount ?? 0) + 2)) },
+      data: { post: info(p.id, (subs[p.id]?.lastCount ?? 0) + 2), comments: [] },
     }));
     const onGrew = vi.fn();
     const deps: PollDeps = {
@@ -174,7 +177,7 @@ describe('runCheck', () => {
     expect(getJson).not.toHaveBeenCalled();
   });
 
-  it('asks once for all watched threads and reports the ones that grew', async () => {
+  it('asks once per watched thread (post only) and reports the ones that grew', async () => {
     const subs = addSub(
       addSub({}, POST, 2, 0),
       { ...POST, id: 't3_b', title: 'B', commentCount: 4 },
@@ -183,19 +186,87 @@ describe('runCheck', () => {
     );
     const { deps, getJson, onGrew, saved } = rig(subs);
     expect(await runCheck(deps)).toBe('ok');
-    expect(getJson).toHaveBeenCalledTimes(1);
-    expect(getJson).toHaveBeenCalledWith('info', { id: ['t3_text1', 't3_b'] }, { fresh: true });
+    expect(getJson).toHaveBeenCalledTimes(2);
+    expect(getJson).toHaveBeenCalledWith(
+      'comments',
+      { id: 't3_text1', limit: 1, depth: 0 },
+      { fresh: true },
+    );
+    expect(getJson).toHaveBeenCalledWith(
+      'comments',
+      { id: 't3_b', limit: 1, depth: 0 },
+      { fresh: true },
+    );
     expect(onGrew).toHaveBeenCalledTimes(1);
     expect(onGrew.mock.calls[0]![0]).toHaveLength(2);
     expect(saved().t3_text1).toMatchObject({ lastCount: 1117, newCount: 2 });
   });
 
-  it('batches in groups of 100', async () => {
+  it('asks about at most ROUND_MAX threads a round, and carries on where it stopped', async () => {
+    expect(ROUND_MAX).toBeLessThan(30);
     let subs: SubMap = {};
-    for (let i = 0; i < 150; i++) subs = addSub(subs, { ...POST, id: `t3_p${i}` }, 2, 0);
-    const { deps, getJson } = rig(subs);
-    await runCheck(deps);
-    expect(getJson.mock.calls.map((c) => c[1].id.length)).toEqual([100, 50]);
+    const ids: string[] = [];
+    for (let i = 0; i < 40; i++) {
+      const id = `t3_p${String(i).padStart(2, '0')}`;
+      ids.push(id);
+      subs = addSub(subs, { ...POST, id }, 2, 0);
+    }
+    let last: string | null = null;
+    const cursor = { get: async () => last, set: async (id: string) => void (last = id) };
+    const first = rig(subs, { cursor });
+    await runCheck(first.deps);
+    const asked1 = first.getJson.mock.calls.map((c) => c[1].id);
+    expect(asked1).toEqual(ids.slice(0, ROUND_MAX));
+    const second = rig(subs, { cursor });
+    await runCheck(second.deps);
+    const asked2 = second.getJson.mock.calls.map((c) => c[1].id);
+    expect(asked2).toEqual([...ids.slice(ROUND_MAX), ...ids].slice(0, ROUND_MAX));
+    expect(new Set([...asked1, ...asked2]).size).toBe(40);
+  });
+
+  it('skips a thread Reddit has no page for, and ends the round on a pause', async () => {
+    const subs = addSub(
+      addSub(addSub({}, { ...POST, id: 't3_a' }, 2, 0), { ...POST, id: 't3_b' }, 2, 0),
+      { ...POST, id: 't3_c' },
+      2,
+      0,
+    );
+    const asked: string[] = [];
+    const answers: Record<string, unknown> = {
+      t3_a: { ok: false, reason: 'http', message: 'Reddit answered 404.' },
+      t3_b: { ok: true, cached: false, data: { post: info('t3_b', 9), comments: [] } },
+      t3_c: { ok: false, reason: 'backoff', message: 'paused' },
+    };
+    let last: string | null = null;
+    const { deps, saved } = rig(subs, {
+      getJson: (async (_k: string, p: { id: string }) => (
+        asked.push(p.id),
+        answers[p.id]
+      )) as never,
+      cursor: { get: async () => last, set: async (id) => void (last = id) },
+    });
+    expect(await runCheck(deps)).toBe('ok');
+    expect(asked).toEqual(['t3_a', 't3_b', 't3_c']);
+    expect(saved().t3_b).toMatchObject({ lastCount: 9 });
+    expect(last).toBe('t3_b'); // the paused thread is asked first next round
+  });
+
+  it('picks rounds in id order, wrapping round', () => {
+    expect(roundOf(['c', 'a', 'b'], null, 5)).toEqual(['a', 'b', 'c']);
+    expect(roundOf(['a', 'b', 'c', 'd'], 'b', 2)).toEqual(['c', 'd']);
+    expect(roundOf(['a', 'b', 'c', 'd'], 'd', 2)).toEqual(['a', 'b']);
+    expect(roundOf(['a', 'b', 'c', 'd'], 'c', 3)).toEqual(['d', 'a', 'b']);
+  });
+
+  it('keeps the round cursor in extension storage', async () => {
+    const mem: Record<string, unknown> = {};
+    const c = storageCursor({
+      get: async (k) => ({ [k]: mem[k] }),
+      set: async (items) => void Object.assign(mem, items),
+    });
+    expect(await c.get()).toBeNull();
+    await c.set('t3_x');
+    expect(await c.get()).toBe('t3_x');
   });
 
   it('stands down when another tab holds the lock, and when Reddit refuses', async () => {
@@ -338,7 +409,7 @@ describe('threadSubscriptions module', () => {
       toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'Date'],
     });
     vi.mocked(netFetch).mockResolvedValue(
-      jsonOk(infoListing([{ id: 't3_text1', comments: 1120 }])) as never,
+      jsonOk(commentsDoc({ id: 't3_text1', comments: 1120 }, [])) as never,
     );
     await fakeBrowser.storage.local.set({ [SUBS_KEY]: addSub({}, POST, 2, Date.now()) });
     const again = await bootModules([threadSubscriptions], {
@@ -350,7 +421,7 @@ describe('threadSubscriptions module', () => {
 
     expect(netFetch).toHaveBeenCalledTimes(1);
     const [url, init] = vi.mocked(netFetch).mock.calls[0]!;
-    expect(url).toBe('/api/info.json?raw_json=1&id=t3_text1');
+    expect(url).toBe('/comments/text1.json?raw_json=1&limit=1&depth=0');
     expect(init?.method).toBe('GET');
     const note = again.notices.find((n) => /new comments? in/.test(n.message));
     expect(note?.message).toBe('5 new comments in Got laid off');
