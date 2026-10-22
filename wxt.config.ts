@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'wxt';
 import preact from '@preact/preset-vite';
+import { noInnerHtml } from './scripts/no-inner-html';
 
 // Reddit origins REScue runs on. old.reddit.com is handled by its own small entrypoint.
 export const REDDIT_MATCHES = ['*://www.reddit.com/*', '*://reddit.com/*', '*://sh.reddit.com/*'];
@@ -10,7 +11,7 @@ export default defineConfig({
   srcDir: 'src',
   // WXT_OUT_DIR builds elsewhere, e.g. on local disk when the repo is on a network share.
   outDir: process.env.WXT_OUT_DIR ?? '.output',
-  vite: () => ({ plugins: [preact()] }),
+  vite: () => ({ plugins: [noInnerHtml(), preact()] }),
   hooks: {
     // The neutrality scores ship as a plain data file the background reads on request (not inside
     // any script, so pages that do not use it never parse it). Not web-accessible.

@@ -146,10 +146,9 @@ export function sanitizeNode(src: Node): DocumentFragment {
 }
 
 export function sanitizeHtml(html: string): string {
-  const tpl = inert().createElement('template');
-  tpl.innerHTML = html;
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
   const wrap = inert().createElement('div');
-  wrap.appendChild(sanitizeNode(tpl.content));
+  wrap.appendChild(sanitizeNode(parsed.body));
   return wrap.innerHTML;
 }
 
