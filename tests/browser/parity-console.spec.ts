@@ -117,6 +117,16 @@ test('About lists version, source, license, issue and privacy links', async () =
   await expect(links.getByRole('link', { name: 'Report an issue' })).toBeVisible();
   await links.locator('summary').click();
   await expect(links.locator('pre')).toContainText('REScue Privacy Policy');
+  // The donation addresses: plain text with a Copy button, never a link.
+  const codes = links.locator('[data-copy-text]');
+  await expect(codes).toHaveText([
+    'bc1que3qguxlvg0gkp4yqn6dju82rvqq5rmdaylj27',
+    '0x23c46670511FfF3497A11f3ebbcdAc244b91F794',
+  ]);
+  await expect(links.locator('a[href*="bc1"], a[href*="0x23c4"]')).toHaveCount(0);
+  const copy = links.locator('.copy-btn').first();
+  await copy.click();
+  await expect(links.getByText(/^Copied$|Ctrl+C/).first()).toBeVisible();
 });
 
 test('search lists matching options grouped by module, and a result opens the option', async () => {

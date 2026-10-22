@@ -210,6 +210,16 @@ console's *Troubleshooter* can copy a diagnostics report for you.
 
 The full attribution is in [`NOTICE`](NOTICE).
 
+## Donate
+
+REScue is free and always will be. If you would like to support it:
+
+- Bitcoin: `bc1que3qguxlvg0gkp4yqn6dju82rvqq5rmdaylj27`
+- Ethereum: `0x23c46670511FfF3497A11f3ebbcdAc244b91F794`
+
+The same addresses are in the add-on under settings › About REScue. Check the address you paste
+into your wallet against one of these two places before you send.
+
 ## License
 
 [GPL-3.0-or-later](LICENSE).

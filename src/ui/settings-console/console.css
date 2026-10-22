@@ -505,3 +505,20 @@ tfoot button {
 tr.drop-target td {
   border-top: 2px solid var(--accent);
 }
+.copy-text {
+  user-select: all;
+  word-break: break-all;
+  font-size: 12px;
+  padding: 1px 4px;
+  background: var(--accent-bg);
+  border-radius: 4px;
+}
+.copy-btn {
+  margin-left: 4px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.copy-hint {
+  font-size: 12px;
+}

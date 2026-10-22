@@ -7,6 +7,7 @@ import {
   type SettingsProfile,
 } from '../../core/settings';
 import type { ModuleAction, ModuleDefinition, OptionSpec, OptionValue } from '../../core/types';
+import { CopyLine } from './CopyLine';
 import { Highlight } from './Highlight';
 import { OptionField } from './OptionField';
 import type { ModuleMatch } from './search';
@@ -201,7 +202,9 @@ export function ModuleSection(p: SectionProps) {
         <ul class="links" data-links={d.id}>
           {links.map((l) => (
             <li>
-              {l.href ? (
+              {l.copy ? (
+                <CopyLine label={l.label} text={l.copy} />
+              ) : l.href ? (
                 <a href={l.href} target="_blank" rel="noopener noreferrer">
                   {l.label}
                 </a>

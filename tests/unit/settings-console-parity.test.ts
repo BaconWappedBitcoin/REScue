@@ -10,7 +10,7 @@ import {
   searchModules,
   snippet,
 } from '../../src/ui/settings-console/search';
-import { about } from '../../src/modules/core/troubleshooter';
+import { about, DONATE_BITCOIN, DONATE_ETHEREUM } from '../../src/modules/core/troubleshooter';
 
 const tick = async () => {
   for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
@@ -384,6 +384,37 @@ describe('about links', () => {
     expect(hrefs).toContain('https://doi.org/10.7910/DVN/1QMLOV');
     expect(ul.querySelector('a')!.getAttribute('rel')).toContain('noopener');
     expect(ul.querySelector('details pre')!.textContent).toContain('REScue Privacy Policy');
+  });
+
+  it('shows the Bitcoin donation address as text with a Copy button, and no link', async () => {
+    vi.spyOn(browser.runtime, 'getManifest').mockReturnValue({ version: '1.2.3' } as never);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const el = mount([about]);
+    await tick();
+    const ul = el.querySelector('[data-links="about"]')!;
+    const codes = [...ul.querySelectorAll('[data-copy-text]')].map((c) => c.textContent);
+    expect(codes).toEqual([DONATE_BITCOIN, DONATE_ETHEREUM]);
+    const code = ul.querySelector('[data-copy-text]')!;
+    expect(code.closest('a')).toBeNull();
+    expect([...ul.querySelectorAll('a')].some((a) => /bc1|0x23c4/i.test(a.href))).toBe(false);
+    const btn = ul.querySelector<HTMLButtonElement>('.copy-btn')!;
+    btn.click();
+    await tick();
+    expect(writeText).toHaveBeenCalledWith('bc1que3qguxlvg0gkp4yqn6dju82rvqq5rmdaylj27');
+    expect(btn.textContent).toBe('Copied');
+  });
+
+  it('selects the address for Ctrl+C when the clipboard is refused', async () => {
+    vi.spyOn(browser.runtime, 'getManifest').mockReturnValue({ version: '1.2.3' } as never);
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'));
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const el = mount([about]);
+    await tick();
+    el.querySelector<HTMLButtonElement>('[data-links="about"] .copy-btn')!.click();
+    await tick();
+    expect(window.getSelection()!.toString()).toBe(DONATE_BITCOIN);
+    expect(el.querySelector('.copy-hint')!.textContent).toContain('Ctrl+C');
   });
 });
 

@@ -217,6 +217,8 @@ export interface ModuleLink {
   href?: string;
   /** Shown in a collapsible block (e.g. the bundled privacy policy). */
   text?: string;
+  /** Shown as selectable text with a Copy button (e.g. the donation address). */
+  copy?: string;
 }
 
 export interface ModuleDefinition<O extends OptionSchema = OptionSchema> {
