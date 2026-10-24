@@ -681,6 +681,17 @@ export const C = {
   loginWall: {
     overlay: '#desktop-dynamic-upsell-dialog, desktop-dynamic-upsell-modal',
     scrollLockClass: 'rpl-scroll-lock',
+    /**
+     * A log-in form inside the pop-up: Reddit shows its sign-in in the same dialog, so a dialog
+     * holding one is the reader's own log-in and is never removed.
+     */
+    authForm:
+      'input[type="password"], input[name="username"], auth-flow-login, faceplate-form[action*="login"]',
+    /** Reddit's own log-in / sign-up controls: pressing one means the reader wants to sign in. */
+    authControlText:
+      /^\s*(log\s*in|sign\s*in|sign\s*up|continue with (google|apple|email|phone))\s*$/i,
+    authControlHref: /\/(login|register|account\/(login|register))\b/i,
+    authControlId: /^(login-button|signup-button)$/i,
   },
   /**
    * Search results (FR-001), VERIFIED LIVE 2026-10-15 (signed in, www. and sh., global search and
