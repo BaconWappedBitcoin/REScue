@@ -33,7 +33,8 @@ export default defineConfig({
     ],
   },
   manifest: ({ browser }) => ({
-    name: 'REScue',
+    name: 'REScue for Reddit',
+    short_name: 'REScue',
     description: 'Reddit Enhancement Suite features for modern Reddit and sh.reddit.com.',
     homepage_url: 'https://github.com/BaconWappedBitcoin/REScue',
     // Firefox does not accept declarativeNetRequest as an optional permission. There REScue holds
