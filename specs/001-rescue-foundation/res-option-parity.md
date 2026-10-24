@@ -31,7 +31,7 @@ Matrix: Adapted.
 | backup | button | Have | Backup & restore module. |
 | searchSettings | button | Have | Settings console search + gear menu. |
 | announcements | button | OB | RES release announcements subreddit; REScue has no announcement feed. |
-| donate | button | OB | REScue is not donation-funded; no such link. |
+| donate | button | Have | Bitcoin and Ethereum addresses in About, with a Copy button (and in the README). |
 | bugs | button | Partial | "Report an issue" link in About (repo issues), not /r/RESissues. |
 | suggestions | button | OB | RES community subreddit has no REScue equivalent. |
 | faq | button | OB | RES wiki. |

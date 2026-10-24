@@ -18,8 +18,10 @@ export function chromeCss(): string {
   return [
     // Reddit's large "Post to r/…" bar: the subreddit header's own "Create Post" button stays.
     `${R} ${C.main} ${k.composerBar} { display: none !important; }`,
-    // REScue's keyboard selection: a light band with a thin left rule, like RES on old Reddit.
-    `${R} #${k.selectionBoxId} { border: 0 !important; border-left: 2px solid var(--os-head-line) !important; border-radius: 0 !important; box-shadow: none !important; background: color-mix(in srgb, var(--os-head) 35%, transparent) !important; }`,
+    // REScue's keyboard selection: a thin left rule, like RES on old Reddit. No fill of its own:
+    // the box lies OVER the post, so a fill would tint its video and pictures (keyboardNav's
+    // "Tint the selected item" still adds one for those who ask).
+    `${R} #${k.selectionBoxId} { border: 0 !important; border-left: 2px solid var(--os-head-line) !important; border-radius: 0 !important; box-shadow: none !important; }`,
     // The header, closer to old Reddit's: a black wordmark, the page name in small capitals beside
     // it, a plain narrow search box at the right and the account buttons in a light rounded box.
     `${R} ${k.headerLogo} svg { height: 18px; width: auto; }`,

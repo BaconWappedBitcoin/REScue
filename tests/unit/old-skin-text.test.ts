@@ -67,7 +67,14 @@ describe('sort tabs', () => {
 
   it('offers best only on the home feed and defaults to it', () => {
     const tabs = sortTabs(home, []);
-    expect(tabs.map((t) => t.key)).toEqual(['best', 'hot', 'new', 'rising', 'controversial', 'top']);
+    expect(tabs.map((t) => t.key)).toEqual([
+      'best',
+      'hot',
+      'new',
+      'rising',
+      'controversial',
+      'top',
+    ]);
     expect(tabs[0]).toMatchObject({ href: '/best/', active: true });
     expect(sortTabs(sub, []).some((t) => t.key === 'best')).toBe(false);
   });
@@ -75,6 +82,19 @@ describe('sort tabs', () => {
   it('never invents a link for a listing it cannot compute', () => {
     const feed: Route = { kind: 'customFeed', path: '/user/a/m/b', username: 'a' };
     expect(sortTabs(feed, [])).toEqual([]);
-    expect(sortTabs(feed, [{ key: 'hot', href: '/user/a/m/b/hot/', selected: false }])).toHaveLength(1);
+    expect(
+      sortTabs(feed, [{ key: 'hot', href: '/user/a/m/b/hot/', selected: false }]),
+    ).toHaveLength(1);
+  });
+});
+
+describe('old look keyboard selection', () => {
+  it('draws only a left rule: no fill, since the box lies over the post and its video', async () => {
+    const { chromeCss } = await import('../../src/model/oldSkinChrome');
+    const rule = chromeCss()
+      .split('\n')
+      .find((r) => r.includes('#rescue-selection'))!;
+    expect(rule).toContain('border-left: 2px solid');
+    expect(rule).not.toMatch(/background/);
   });
 });
