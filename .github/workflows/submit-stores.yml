@@ -1,0 +1,81 @@
+# Submits a published release's zips to the Chrome Web Store and Firefox Add-ons for review.
+# Uses exactly the files attached to the release. A store whose secrets are not set is skipped.
+#
+# Secrets (Settings > Secrets and variables > Actions):
+#   FIREFOX_JWT_ISSUER, FIREFOX_JWT_SECRET   addons.mozilla.org > Tools > Manage API Keys
+#   CHROME_SERVICE_ACCOUNT_JSON              the service account's whole JSON key file
+#   CHROME_EXTENSION_ID, CHROME_PUBLISHER_ID from the Chrome Web Store developer dashboard
+name: Submit to stores
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to submit (e.g. v1.0.3)
+        required: true
+      dry_run:
+        description: Only check the store logins; upload nothing
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: submit-stores
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  DRY_RUN: ${{ inputs.dry_run == true && '--dry-run' || '' }}
+  PUBLISHER: publish-browser-extension@6.2.0
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download the release zips
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir zips \
+            --pattern 'rescue-*-chrome.zip' --pattern 'rescue-*-firefox.zip' --pattern 'rescue-*-sources.zip'
+          ls -l zips
+
+      - name: Firefox Add-ons
+        env:
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+        run: |
+          if [ -z "$FIREFOX_JWT_ISSUER" ] || [ -z "$FIREFOX_JWT_SECRET" ]; then
+            echo "::notice::Firefox secrets are not set; skipping Firefox."
+            exit 0
+          fi
+          npx --yes -p "$PUBLISHER" publish-extension $DRY_RUN \
+            --firefox-zip zips/rescue-*-firefox.zip \
+            --firefox-sources-zip zips/rescue-*-sources.zip \
+            --firefox-extension-id 'rescue@rescue-extension'
+
+      - name: Chrome Web Store
+        if: ${{ !cancelled() }}
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.CHROME_SERVICE_ACCOUNT_JSON }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+        run: |
+          if [ -z "$SERVICE_ACCOUNT_JSON" ] || [ -z "$CHROME_EXTENSION_ID" ] || [ -z "$CHROME_PUBLISHER_ID" ]; then
+            echo "::notice::Chrome secrets are not set; skipping Chrome."
+            exit 0
+          fi
+          # The key file stores line breaks as \n; jq turns them back into the real PEM.
+          CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL=$(jq -r .client_email <<<"$SERVICE_ACCOUNT_JSON")
+          CHROME_SERVICE_ACCOUNT_PRIVATE_KEY=$(jq -r .private_key <<<"$SERVICE_ACCOUNT_JSON")
+          export CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL CHROME_SERVICE_ACCOUNT_PRIVATE_KEY
+          # A newer release replaces a version still waiting for review.
+          npx --yes -p "$PUBLISHER" publish-extension $DRY_RUN \
+            --chrome-api-version v2 \
+            --chrome-zip zips/rescue-*-chrome.zip \
+            --chrome-cancel-pending true
