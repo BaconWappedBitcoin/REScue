@@ -327,6 +327,9 @@ test('thread: navigator, reply controls, hover popup, saved list, help, command 
   await page.keyboard.press('Enter');
   await expect(page.locator('#rescue-cmdline li').first()).toBeVisible();
   await expectAudited(page, 'the command line');
+  // The command line stays open over the page (on Linux it covers the comment's controls).
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#rescue-cmdline')).toHaveCount(0);
 
   await page.locator('.rescue-hide-children').first().click();
   await expectAudited(page, 'a collapsed reply branch');
