@@ -29,7 +29,8 @@ concurrency:
 
 env:
   TAG: ${{ github.event.release.tag_name || inputs.tag }}
-  DRY_RUN: ${{ inputs.dry_run == true && '--dry-run' || '' }}
+  # Not DRY_RUN: publish-extension reads that name itself and rejects an empty value.
+  SUBMIT_FLAGS: ${{ inputs.dry_run == true && '--dry-run' || '' }}
   PUBLISHER: publish-browser-extension@6.2.0
 
 jobs:
@@ -54,7 +55,7 @@ jobs:
             echo "::notice::Firefox secrets are not set; skipping Firefox."
             exit 0
           fi
-          npx --yes -p "$PUBLISHER" publish-extension $DRY_RUN \
+          npx --yes -p "$PUBLISHER" publish-extension $SUBMIT_FLAGS \
             --firefox-zip zips/rescue-*-firefox.zip \
             --firefox-sources-zip zips/rescue-*-sources.zip \
             --firefox-extension-id 'rescue@rescue-extension'
@@ -75,7 +76,7 @@ jobs:
           CHROME_SERVICE_ACCOUNT_PRIVATE_KEY=$(jq -r .private_key <<<"$SERVICE_ACCOUNT_JSON")
           export CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL CHROME_SERVICE_ACCOUNT_PRIVATE_KEY
           # A newer release replaces a version still waiting for review.
-          npx --yes -p "$PUBLISHER" publish-extension $DRY_RUN \
+          npx --yes -p "$PUBLISHER" publish-extension $SUBMIT_FLAGS \
             --chrome-api-version v2 \
             --chrome-zip zips/rescue-*-chrome.zip \
             --chrome-cancel-pending true
