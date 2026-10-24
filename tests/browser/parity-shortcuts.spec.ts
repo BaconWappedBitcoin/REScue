@@ -332,28 +332,7 @@ test('at 820px wide the bar and its menus stay inside the viewport, and a drag t
   const menu = bar(page).locator(
     '.rescue-sc-menu[role="menu"]:not([data-rescue-sort-menu]):not([data-rescue-mail-menu]):not([data-rescue-feeds-menu]):not([data-rescue-feed-sections])',
   );
-  await expect(menu)
-    .toBeVisible()
-    .catch(async (e: unknown) => {
-      const diag = await links(page)
-        .last()
-        .evaluate((a) => {
-          const r = a.getBoundingClientRect();
-          const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-          const vp = a.closest('.rescue-sc-viewport')?.getBoundingClientRect();
-          return {
-            link: [a.textContent, Math.round(r.x), Math.round(r.width), a.getAttribute('href')],
-            viewport: vp && [Math.round(vp.x), Math.round(vp.width)],
-            hit: hit && `${hit.tagName}.${hit.className} ${hit.textContent?.slice(0, 30)}`,
-            bar: [...document.querySelectorAll('#rescue-subreddit-bar > *')].map(
-              (n) =>
-                `${n.className}${(n as HTMLElement).hidden ? '(hidden)' : ''}:${Math.round(n.getBoundingClientRect().width)}`,
-            ),
-          };
-        });
-      console.log('[diag] 820px group hover:', JSON.stringify(diag));
-      throw e;
-    });
+  await expect(menu).toBeVisible();
   await inside(menu);
   await inside(bar(page));
 });

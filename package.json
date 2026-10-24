@@ -1,7 +1,7 @@
 {
   "name": "rescue",
   "description": "REScue: Reddit Enhancement Suite features for modern Reddit and sh.reddit.com",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-or-later",

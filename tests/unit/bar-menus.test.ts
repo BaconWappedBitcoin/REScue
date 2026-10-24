@@ -316,3 +316,18 @@ describe('usernameHider per-account display text', () => {
     expect(document.getElementById('me')!.textContent).toBe('u/reader');
   });
 });
+
+describe('shortcut bar redraw', () => {
+  it('keeps the strip scrolled where it was when the bar is drawn again', async () => {
+    const m = await boot({
+      subreddits: [{ subreddit: 'a' }, { subreddit: 'b' }, { subreddit: 'c' }],
+    });
+    const before = q<HTMLElement>('.rescue-sc-viewport')!;
+    before.scrollLeft = 120;
+    m.goTo({ kind: 'subreddit', path: '/r/b/', subreddit: 'b' } as never);
+    await new Promise((r) => setTimeout(r, 0));
+    const after = q<HTMLElement>('.rescue-sc-viewport')!;
+    expect(after).not.toBe(before);
+    expect(after.scrollLeft).toBe(120);
+  });
+});

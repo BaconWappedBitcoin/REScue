@@ -349,6 +349,8 @@ export function renderBar(ctx: BarCtx, save: SaveRows, mine?: MineHost, menus?: 
     groupMenu,
     trash,
   ];
+  // A redraw (after a reorder, add, rename or settings change) keeps the strip where it was.
+  const kept = bar.querySelector<HTMLElement>('.rescue-sc-viewport')?.scrollLeft ?? 0;
   bar.replaceChildren(...kids.filter((k): k is Node => k !== null));
   bar.style.setProperty(
     '--rescue-sc-edit-delay',
@@ -357,6 +359,7 @@ export function renderBar(ctx: BarCtx, save: SaveRows, mine?: MineHost, menus?: 
   bar.toggleAttribute('data-rescue-uppercase', ctx.options.allowLowercase === false);
   if (!bar.isConnected) (document.body ?? document.documentElement).appendChild(bar);
 
+  viewport.scrollLeft = kept;
   viewport.addEventListener('scroll', () => updateArrows(bar));
   observer?.disconnect();
   if (typeof ResizeObserver !== 'undefined') {

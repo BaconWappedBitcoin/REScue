@@ -129,22 +129,10 @@ test('? lists the commands and Shift+Enter opens the result in a new tab', async
 
   await page.locator('#rescue-cmdline input').fill('r/rust');
   const tab = ctx.waitForEvent('page');
-  const requested: string[] = [];
-  ctx.on('request', (r) => requested.push(r.url()));
   await page.keyboard.press('Shift+Enter');
+  // Checked on the new tab itself: on Linux the context never reports that tab's first request.
   const opened = await tab;
-  await expect
-    .poll(() => requested.some((u) => u.startsWith('https://www.reddit.com/r/rust/')))
-    .toBe(true)
-    .catch((e: unknown) => {
-      console.log(
-        '[diag] new tab url:',
-        opened.url(),
-        'reddit requests:',
-        requested.filter((u) => u.includes('reddit.com')),
-      );
-      throw e;
-    });
+  await expect.poll(() => opened.url()).toMatch(/^https:\/\/www\.reddit\.com\/r\/rust\//);
   // The command line closes and the first page stays where it was.
   await expect(page.locator('#rescue-cmdline')).toHaveCount(0);
   expect(page.url()).toBe(URL);
