@@ -10,6 +10,10 @@
   on today's www.reddit.com and sh.reddit.com, in Chrome and Firefox.
 </p>
 
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/rescue-for-reddit/ddjbmknckcglmfohabaicadgeddpghbh"><strong>Get it for Chrome</strong></a>
+</p>
+
 ---
 
 Reddit Enhancement Suite (RES) made Reddit better for over a decade, but it was written for
@@ -89,8 +93,10 @@ Screenshots are taken signed out, and other people's usernames are replaced with
 
 ## Install
 
-**From the stores:** submitted to the Chrome Web Store and Firefox Add-ons; links will follow once
-they are approved.
+**From the stores:**
+
+- **Chrome, Edge or Brave:** [REScue for Reddit on the Chrome Web Store](https://chromewebstore.google.com/detail/rescue-for-reddit/ddjbmknckcglmfohabaicadgeddpghbh).
+- **Firefox:** submitted to Firefox Add-ons; the link will follow once it is approved.
 
 **From a release:** download `rescue-<version>-chrome.zip` from
 [Releases](https://github.com/BaconWappedBitcoin/REScue/releases), unzip it, and load the folder
