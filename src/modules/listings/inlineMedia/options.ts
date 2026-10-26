@@ -68,6 +68,13 @@ export const OPTIONS = {
     description:
       'A post whose media you showed stays shown when you see it again. Kept on this device only and forgotten after 90 days.',
   },
+  zoomCommentPictures: {
+    type: 'boolean',
+    default: true,
+    title: 'Click a picture in a comment to see it full size',
+    description:
+      'Reddit shows pictures in comments small, and a click opens them in a new tab (which in some browsers loops between the picture and reddit.com/media). With this on, a click shows the picture full size where it is and another click shrinks it again. Middle-click or Ctrl+click still opens the new tab.',
+  },
   scrollOnGalleryNavigate: {
     type: 'boolean',
     default: true,

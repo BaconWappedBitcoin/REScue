@@ -21,6 +21,7 @@ import { C } from '../../../contracts/reddit';
 import { h, ownQueryAll } from '../../../core/dom';
 import { parsePost } from '../../../model/post';
 import { agoText, commentsText, domainText } from '../../../model/oldSkinText';
+import { EXPANDED } from '../../../model/oldSkinFeed';
 import type { Post } from '../../../model/types';
 import type { ActionResult } from '../../../core/actions';
 import type { Route } from '../../../core/types';
@@ -62,6 +63,8 @@ export class PostView {
   private readonly save: HTMLButtonElement;
   private readonly source: HTMLButtonElement;
   private readonly thumb: HTMLElement;
+  /** RES's expando: shows Reddit's own media full size under the row (feeds only). */
+  private readonly expand: HTMLButtonElement;
   private saved = false;
   private post: Post | null = null;
 
@@ -101,6 +104,17 @@ export class PostView {
     this.save = h('button', { type: 'button', class: 'rescue-olink' }, 'save');
     this.source = h('button', { type: 'button', class: 'rescue-olink rescue-o-source' }, 'source');
     onActivate(this.source, () => void openSourcePopup(first.id, ctx, null, this.source));
+    this.expand = h(
+      'button',
+      {
+        type: 'button',
+        class: 'rescue-olink rescue-oexpand',
+        hidden: true,
+        'aria-expanded': 'false',
+      },
+      'show image',
+    );
+    onActivate(this.expand, () => this.toggleExpand());
     const words = h(
       'ul',
       { class: 'rescue-olinks' },
@@ -115,7 +129,18 @@ export class PostView {
     this.body = h(
       'div',
       { class: 'rescue-obody' },
-      h('div', { class: 'rescue-oline' }, this.title, ' ', this.flair, this.nsfw, ' ', this.domain),
+      h(
+        'div',
+        { class: 'rescue-oline' },
+        this.title,
+        ' ',
+        this.flair,
+        this.nsfw,
+        ' ',
+        this.domain,
+        ' ',
+        this.expand,
+      ),
       h(
         'div',
         { class: 'rescue-otag' },
@@ -188,6 +213,8 @@ export class PostView {
     const t = e.target instanceof Element ? e.target : null;
     if (!t || (t !== this.thumb && t.closest(C.mediaContainer)?.parentElement !== this.host))
       return;
+    // Expanded media keeps its own clicks (a gallery's arrows, the video player).
+    if (this.host.hasAttribute(EXPANDED) && t !== this.thumb) return;
     if (e.button > 1) return;
     const href = this.title.getAttribute('href');
     if (!href) return;
@@ -273,7 +300,30 @@ export class PostView {
     setAttr(this.thumb, 'data-kind', pic ? 'img' : isSelf ? 'self' : 'link');
     if (pic) this.thumb.style.setProperty('--os-thumb', pic);
     else this.thumb.style.removeProperty('--os-thumb');
+    this.updateExpand(!!video, !!gallery);
     this.vote.update();
+  }
+
+  private toggleExpand(): void {
+    setAttr(this.host, EXPANDED, this.host.hasAttribute(EXPANDED) ? null : '');
+    this.render();
+  }
+
+  /** "show image" / "hide image" (or gallery, video) on a feed post that has media of its own. */
+  private updateExpand(video: boolean, gallery: boolean): void {
+    const media =
+      !!this.host.closest(C.feed) && !!this.host.querySelector(`:scope > ${C.mediaContainer}`);
+    this.expand.hidden = !media;
+    if (!media) return setAttr(this.host, EXPANDED, null);
+    const open = this.host.hasAttribute(EXPANDED);
+    const kind = video ? 'video' : gallery ? 'gallery' : 'image';
+    setText(this.expand, `${open ? 'hide' : 'show'} ${kind}`);
+    setAttr(this.expand, 'aria-expanded', String(open));
+    setAttr(
+      this.expand,
+      'title',
+      `REScue: ${open ? 'hide' : 'show'} this post's ${kind} here, full size`,
+    );
   }
 
   /**

@@ -36,7 +36,7 @@ for (const p of document.querySelectorAll('shreddit-post')) {
   p.prepend(link);
   const sr = p.attachShadow({ mode: 'open' });
   const votes = p.hasAttribute('data-novote') ? '' : '<button id="vote" upvote aria-pressed="false">Upvote</button><button downvote aria-pressed="false">Downvote</button>';
-  sr.innerHTML = '<slot name="full-post-link"></slot><slot name="credit-bar"></slot><slot name="title"></slot><slot></slot><div id="row">' + votes + '<button part="share-button">Share</button></div>';
+  sr.innerHTML = '<slot name="full-post-link"></slot><slot name="credit-bar"></slot><slot name="title"></slot><slot name="post-media-container"></slot><slot></slot><div id="row">' + votes + '<button part="share-button">Share</button></div>';
   for (const b of sr.querySelectorAll('button[upvote], button[downvote]')) {
     b.addEventListener('click', () => {
       const on = b.getAttribute('aria-pressed') !== 'true';

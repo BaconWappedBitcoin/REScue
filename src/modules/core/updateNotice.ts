@@ -82,6 +82,10 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
     since: '0.1.9',
     text: 'New from RES: Night mode, Comment tools (macros and a big editor above the reply box), Show source (a comment’s raw Markdown), “mail ▾” and “feeds ▾” menus on the shortcut bar, a “*” on edited comments in the Old Reddit look, per-account display text in the Username hider, and media keys for the selected post ([ and ] step a gallery, m mutes a video, plus RES’s image size and move keys).',
   },
+  {
+    since: '1.0.6',
+    text: 'In the Old Reddit look, “show image” after a post’s title shows its picture, gallery or video full size right in the feed. A click on a picture in a comment now shows it full size in place instead of opening a new tab.',
+  },
 ];
 
 /** The new-feature tips an update from `from` to `to` brings. */

@@ -17,6 +17,8 @@ import { ROOT, scoped, thumbPx, type OldSkinOptions } from './oldSkinBase';
 
 /** hidePromoted's marker on an ad it hid (modules/listings/hidePromoted/hider.ts MARK). */
 const PROMOTED_MARK = 'data-rescue-promoted';
+/** A feed post whose media the reader expanded with "show image" (oldSkin/post.ts). */
+export const EXPANDED = 'data-rescue-oexp';
 
 export function feedCss(o: OldSkinOptions): string {
   const k = C.skin;
@@ -27,6 +29,7 @@ export function feedCss(o: OldSkinOptions): string {
   const A = `${P} > ${k.wrapA}`;
   const rank = o.rankNumbers ? 'counter(osrank)' : '""';
   const rankW = o.rankNumbers ? 34 : 0;
+  const indent = rankW + 58 + px + (none ? 0 : 8);
   const rules: string[] = [
     `${ROOT} ${C.feed} { counter-reset: osrank; }`,
     `${ROOT} ${C.feed} > ${k.feedDivider} { display: none; }`,
@@ -80,6 +83,15 @@ export function feedCss(o: OldSkinOptions): string {
     // A large picture or video (shape B) shrinks to thumbnail size (zoom scales the whole box), or goes away.
     `${P} > ${C.mediaContainer} { grid-area: 1 / 3; width: 583px; zoom: ${(px / 583).toFixed(4)}; height: 583px; overflow: hidden; background: var(--os-panel); margin: 4px 0 !important; ${none ? 'display: none;' : ''} }`,
     `${P} > ${C.mediaContainer} * { pointer-events: none; }`,
+    // RES's expando: "show image" (post.ts) brings Reddit's own media back at full size in the
+    // second row, indented under the title, and the parking moves to a 0-high third row at the
+    // bottom (still clipped). The media spans its whole row, so the auto-placed pieces of Reddit's
+    // shadow root cannot land beside it either.
+    `${P}[${EXPANDED}] { grid-template-rows: auto auto 0px; }`,
+    `${P}[${EXPANDED}] > :not(.rescue-ovote, .rescue-oth, .rescue-obody, ${C.mediaContainer}), ${P}[${EXPANDED}] > ${k.wrapA} > :not(${k.wrapAThumb}) { grid-area: 3 / 1; }`,
+    `${P}[${EXPANDED}]:has(> ${C.mediaContainer}) > ${C.mediaContainer} { display: block !important; grid-area: 2 / 1 / 3 / -1; zoom: 1; width: auto; max-width: min(720px, calc(100% - ${indent}px)); height: auto; overflow: visible; margin: 4px 0 10px ${indent}px !important; }`,
+    `${P}[${EXPANDED}] > ${C.mediaContainer} * { pointer-events: auto; }`,
+    `${P}[${EXPANDED}][${EXPANDED}] ${k.videoPlayer} { display: block !important; }`,
     // Reddit's credit bar stays alive (its overflow menu is how save / hide / report are pressed) but unseen.
     `${P} ${s.credit} { position: absolute !important; left: 0; top: 0; width: 1px; height: 1px; margin: 0 !important; padding: 0 !important; clip-path: inset(50%); pointer-events: none; }`,
     // Reddit's full-card link only serves the "comments" word's passed-through click.

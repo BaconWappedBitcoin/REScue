@@ -56,6 +56,7 @@ import {
   type Policy,
   type Scope,
 } from './policy';
+import { startPictureZoom, zoomCss } from './pictureZoom';
 
 const STYLE_ID = 'rescue-inline-media-style';
 const MODULE_ID = 'inlineMedia';
@@ -72,6 +73,7 @@ interface Opts {
   scrollOnExpando: boolean;
   highlightNSFWButton: boolean;
   highlightSpoilerButton: boolean;
+  zoomCommentPictures: boolean;
 }
 
 interface Entry {
@@ -103,6 +105,7 @@ interface State {
 }
 
 let state: State | null = null;
+let stopZoom: (() => void) | null = null;
 /** The key dispatcher the commands went into; it lives as long as the page, so register once. */
 let keysOn: KeysApi | null = null;
 
@@ -151,6 +154,7 @@ const styleText = (o: Opts, commentsHidden: boolean): string =>
     collapseCss(),
     highlightCss(o.highlightNSFWButton, o.highlightSpoilerButton),
     commentMediaCss(commentsHidden),
+    o.zoomCommentPictures !== false ? zoomCss : '',
   ].join('\n');
 
 /** Is media in comments hidden on this page (the switch, or a row for the page's subreddit)? */
@@ -367,6 +371,7 @@ export const inlineMedia = defineModule({
 
   async init(ctx) {
     const o = optsOf(ctx);
+    stopZoom ??= startPictureZoom(() => !!state && optsOf(state.ctx).zoomCommentPictures !== false);
     const policy = policyOf(o);
     // The stylesheet and the comment observer go in before anything is awaited, so media inside
     // comments is already hidden when Reddit first draws it.
@@ -469,6 +474,8 @@ export const inlineMedia = defineModule({
   dispose() {
     const s = state;
     state = null;
+    stopZoom?.();
+    stopZoom = null;
     setMediaStepHost(null);
     if (!s) return;
     for (const e of s.entries.values()) {
