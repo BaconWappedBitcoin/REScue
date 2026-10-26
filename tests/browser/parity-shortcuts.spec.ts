@@ -325,14 +325,19 @@ test('at 820px wide the bar and its menus stay inside the viewport, and a drag t
   await expect.poll(async () => (await targets())[last]).toBe(names[0]);
 
   // The group menu of a link at the strip's right end is clamped into the viewport.
-  await bar(page)
-    .locator('.rescue-sc-viewport')
-    .evaluate((el) => (el.scrollLeft = el.scrollWidth));
-  await links(page).last().hover();
   const menu = bar(page).locator(
     '.rescue-sc-menu[role="menu"]:not([data-rescue-sort-menu]):not([data-rescue-mail-menu]):not([data-rescue-feeds-menu]):not([data-rescue-feed-sections])',
   );
-  await expect(menu).toBeVisible();
+  // The bar redraws once the reorder is saved, which closes an open menu; on a slow machine that
+  // can land just after the hover, so hover again until the menu stays open.
+  await expect(async () => {
+    await bar(page)
+      .locator('.rescue-sc-viewport')
+      .evaluate((el) => (el.scrollLeft = el.scrollWidth));
+    await page.mouse.move(0, 0);
+    await links(page).last().hover();
+    await expect(menu).toBeVisible({ timeout: 1500 });
+  }).toPass({ timeout: 15_000 });
   await inside(menu);
   await inside(bar(page));
 });
