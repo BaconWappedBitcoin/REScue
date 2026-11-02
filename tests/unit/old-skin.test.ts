@@ -93,6 +93,20 @@ describe('the stylesheet', () => {
     }
   });
 
+  it('lets the header and the subreddit strip scroll away only when asked', () => {
+    const pinned =
+      /reddit-header-large[^{]*#rescue-subreddit-bar \{ position: absolute !important; \}/;
+    expect(oldSkinCss(DEFAULTS)).not.toMatch(pinned);
+    const away = oldSkinCss({ ...DEFAULTS, headerScrollsAway: true });
+    expect(away).toMatch(pinned);
+    expect(away).toContain('#right-sidebar-container { top: 8px !important; }');
+    // Still scoped: every selector starts with the old look's root.
+    for (const group of selectors(away)) {
+      for (const sel of group.split(/,\s*(?=html\[)/))
+        expect(sel.trim().startsWith(ROOT), sel).toBe(true);
+    }
+  });
+
   it('never leaves a stylesheet value behind from an unknown option', () => {
     const css = oldSkinCss({ ...DEFAULTS, thumbnails: 'bogus; } body { display: none' });
     expect(css).not.toContain('bogus');

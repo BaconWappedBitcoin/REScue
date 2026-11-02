@@ -104,7 +104,7 @@ own data (filters, user tags, keyboard navigation, local dates) work there too (
 
 | RES module | Status | Built | Story | Notes |
 |---|---|---|---|---|
-| userInfo (hover card) | Adapted | — | US5 | Reddit's card shows karma and cake day; REScue adds tag / ignore / highlight to post authors' cards (planned, R20) |
+| userInfo (hover card) | Adapted | ✓ | US5 | Reddit's card shows karma and cake day on a post author only; REScue adds tag / ignore / highlight to that card (hoverCardActions) and, in module `userInfo`, opens its own card (built from Reddit's user card partial, after a hover delay) over comment authors and, in the Old Reddit look, post authors |
 | redditUserInfo | Adapted | ◐ | — | As userInfo. Built (T147): opt-in hiding of Reddit's author hover card (one stylesheet rule on the light-DOM card content) with a REScue-menu switch to show it again; REScue's own card is not built |
 | showKarma | Adapted | ◐ | H1 | Own post and comment karma as words in the tool strip, read from Reddit's user hover-card partial (R6); off by default. Placement beside the header name is not possible (sealed header). Needs a live check |
 | accountSwitcher | Infeasible | — | — | Excluded by Principle V (RES stored passwords); Reddit has native account switching |

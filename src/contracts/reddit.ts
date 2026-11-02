@@ -1165,7 +1165,7 @@ export const CONTRACTS: PageContract[] = [
     required: false,
     status: 'verified',
     verifiedAt: '2026-10-15',
-    usedBy: ['userTagger', 'userHighlight'],
+    usedBy: ['userTagger', 'userHighlight', 'userInfo'],
   },
   {
     key: 'comment.slots',

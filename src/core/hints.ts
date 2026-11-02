@@ -54,6 +54,8 @@ export const label = {
   ignore: 'ignore',
   unignore: 'unignore',
   highlight: 'highlight',
+  unhighlight: 'unhighlight',
+  profile: 'profile',
   loadMore: 'load more',
   loading: 'loading…',
   pause: 'pause',
@@ -393,6 +395,8 @@ export const hint = {
     on
       ? r(`u/${user} is highlighted. Click to remove the highlight`)
       : r(`highlight u/${user} in your highlight colour wherever their name shows`),
+  userInfoName: (user: string): string => r(`open u/${user}’s profile`),
+  userInfoProfile: (user: string): string => r(`open u/${user}’s profile page`),
   feedLoadMore: (busy: boolean): string =>
     busy
       ? r('loading the next page of posts from Reddit')

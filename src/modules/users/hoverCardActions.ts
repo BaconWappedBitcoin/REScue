@@ -8,7 +8,7 @@
 import { h } from '../../core/dom';
 import { hint, label } from '../../core/hints';
 import { OWNER_ATTR } from '../../core/instance';
-import { isModuleEnabled, moduleOn, setOption } from '../../core/settings';
+import { isModuleEnabled, moduleOn } from '../../core/settings';
 import { defineModule, type ModuleContext } from '../../core/types';
 import {
   hoverCardContent,
@@ -16,8 +16,8 @@ import {
   userHoverCards,
   userHoverCardSelector,
 } from '../../model/chromeAnchors';
+import { isHighlighted, toggleHighlight } from './highlightList';
 import { taggerApi } from './taggerApi';
-import { tagKey } from './tagStore';
 import { userHighlight } from './userHighlight';
 
 export const HOVER_ACTIONS_CLASS = 'rescue-hover-actions';
@@ -35,21 +35,6 @@ interface Row {
 
 let rows: Row[] = [];
 let stops: Array<() => void> = [];
-
-// The "highlight" word edits User highlighting's own "highlighted users" list (RES userInfo
-// highlightButton), which has its own colour; the friends list is edited in settings only.
-const highlightedOf = (ctx: ModuleContext): string[] => {
-  const v = ctx.settings.profile().modules.userHighlight?.options?.highlighted;
-  return Array.isArray(v) ? (v as string[]) : [];
-};
-const isHighlighted = (ctx: ModuleContext, user: string): boolean =>
-  highlightedOf(ctx).some((f) => tagKey(f) === tagKey(user));
-
-function toggleHighlight(ctx: ModuleContext, user: string): Promise<void> {
-  const rest = highlightedOf(ctx).filter((f) => tagKey(f) !== tagKey(user));
-  const next = isHighlighted(ctx, user) ? rest : [...rest, user];
-  return ctx.settings.save(setOption(ctx.settings.profile(), userHighlight, 'highlighted', next));
-}
 
 function paint(ctx: ModuleContext): void {
   rows = rows.filter((r) => (r.ignore ?? r.highlight)?.isConnected);

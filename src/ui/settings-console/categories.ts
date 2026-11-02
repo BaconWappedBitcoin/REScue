@@ -74,6 +74,7 @@ const BY_RES_ID: Record<string, ConsoleCategory> = {
   profileRedirect: 'users',
   redditUserInfo: 'users',
   userHighlight: 'users',
+  userInfo: 'users',
   userTagger: 'users',
   commentHidePersistor: 'comments',
   commentNavigator: 'comments',

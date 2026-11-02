@@ -12,6 +12,7 @@ import privacyText from '../../../PRIVACY.md?raw';
 
 /** Where the source, license and issue tracker live. */
 export const REPO_URL = 'https://github.com/BaconWappedBitcoin/REScue';
+export const SUBREDDIT_URL = 'https://www.reddit.com/r/REScueOfficial/';
 /** The maintainer's donation addresses (Bitcoin bech32 and Ethereum EIP-55 checksums verified 2026-10-22). */
 export const DONATE_BITCOIN = 'bc1que3qguxlvg0gkp4yqn6dju82rvqq5rmdaylj27';
 export const DONATE_ETHEREUM = '0x23c46670511FfF3497A11f3ebbcdAc244b91F794';
@@ -188,6 +189,7 @@ export const about = defineModule({
     { label: `Version ${browser.runtime.getManifest().version}` },
     { label: 'Source code', href: REPO_URL },
     { label: 'License: GPL-3.0', href: `${REPO_URL}/blob/main/LICENSE` },
+    { label: 'Official subreddit: r/REScueOfficial', href: SUBREDDIT_URL },
     { label: 'Report an issue', href: `${REPO_URL}/issues/new` },
     { label: 'Donate with Bitcoin:', copy: DONATE_BITCOIN },
     { label: 'Donate with Ethereum:', copy: DONATE_ETHEREUM },

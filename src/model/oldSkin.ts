@@ -74,6 +74,15 @@ function frameCss(o: OldSkinOptions): string {
   ${ROOT} ${k.pageGrid} { grid-template-columns: minmax(0, 1fr) !important; }
 }`);
   }
+  if (o.headerScrollsAway) {
+    // Pinned (fixed) by Reddit and by the strip's own rule; absolute keeps both exactly where they
+    // were at the top of the page, but they scroll away with it, as on old Reddit. The sidebar,
+    // which sticks below the header, then sticks near the top instead.
+    rules.push(
+      `${ROOT} ${k.headerHost}, ${ROOT} #rescue-subreddit-bar { position: absolute !important; }`,
+      `${side} { top: 8px !important; }`,
+    );
+  }
   if (o.hideBanner) {
     rules.push(
       `${ROOT} ${k.mastheadBanner}, ${ROOT} ${k.mastheadIcon} { display: none !important; }`,
@@ -102,7 +111,12 @@ ${ROOT} .rescue-label { margin: 0 2px; padding: 0; background: transparent; colo
 export const VEIL_MS = 3000;
 function veilCss(): string {
   const m = C.skin.mountAttr;
-  const items = [`${C.feed} ${C.post}`, `${C.feed} ${C.adPost}`, `${C.main} > ${C.post}`, `${C.main} ${C.comment}`];
+  const items = [
+    `${C.feed} ${C.post}`,
+    `${C.feed} ${C.adPost}`,
+    `${C.main} > ${C.post}`,
+    `${C.main} ${C.comment}`,
+  ];
   return `
 @keyframes rescue-os-reveal { to { visibility: visible; } }
 ${items.map((i) => `${ROOT} ${i}:not([${m}])`).join(', ')} { visibility: hidden; animation: rescue-os-reveal 0s linear ${VEIL_MS}ms forwards; }
@@ -111,7 +125,17 @@ ${items.map((i) => `${ROOT} ${i}[${m}]`).join(', ')} { visibility: visible; }`;
 
 /** The whole stylesheet for the chosen options. Every rule is scoped by the attribute on <html>. */
 export function oldSkinCss(o: OldSkinOptions): string {
-  return [veilCss(), paletteCss(o), frameCss(o), feedCss(o), searchCss(o), threadCss(), partsCss(), chromeCss(), rescueCss()]
+  return [
+    veilCss(),
+    paletteCss(o),
+    frameCss(o),
+    feedCss(o),
+    searchCss(o),
+    threadCss(),
+    partsCss(),
+    chromeCss(),
+    rescueCss(),
+  ]
     .join('\n')
     .replace(/\n{2,}/g, '\n')
     .trim();

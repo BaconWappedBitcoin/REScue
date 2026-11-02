@@ -374,3 +374,27 @@ test('search results: filter and tag buttons', async () => {
   await expect(page.locator('.rescue-tag-btn').first()).toBeVisible();
   await expectAudited(page, 'search results');
 });
+
+test('thread: the user info card over a comment author', async () => {
+  ctx = await launchWithExtension();
+  await serveRedditPage(ctx, THREAD, htmlDoc(nestedThreadHtml(threadComments(), false, true)));
+  // Reddit's user card partial, as a short fixture (a placeholder user).
+  await ctx.route(/^https:\/\/www\.reddit\.com\/svc\/shreddit\/user-hover-card\//, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/html; charset=utf-8',
+      body: '<div data-testid="user-hover-card"><span data-testid="nameplate">sample_user</span><time datetime="2021-01-19T00:00:00.000Z" data-testid="cake-day">Jan 19, 2021</time><div><span data-testid="karma-number"> 308 </span><div>Post karma</div></div><div><span data-testid="karma-number"> 184 </span><div>Comment karma</div></div></div>',
+    }),
+  );
+  const page = await ctx.newPage();
+  page.setDefaultTimeout(6000);
+  await page.goto(THREAD);
+  await page
+    .locator('shreddit-comment [slot="commentMeta"] a[href="/user/user0/"]')
+    .first()
+    .hover();
+  await expect(page.locator('.rescue-userinfo')).toContainText('308 post karma', {
+    timeout: 4000,
+  });
+  await expectAudited(page, 'the user info card');
+});

@@ -1133,19 +1133,19 @@ Matrix: Built-in. Audit: PARTLY WRONG: Reddit's hover card gives karma and cake 
 
 | Option / affordance | RES default | REScue | Notes |
 |---|---|---|---|
-| hoverInfo | true | Partial | Reddit's hover card replaces the info; REScue's own card (core/hovercards.ts) is unused. |
+| hoverInfo | true | Have | src/modules/users/userInfo.ts (module userInfo, on by default): hover a comment author (or, in the Old Reddit look, the post author) for a moment and REScue's own card opens, built from Reddit's user card partial through core/hovercards.ts. Reddit's own card on a post author is left alone in the normal layout. |
 | useQuickMessage | true | OB | quickMessage deferred. |
-| hoverDelay | '800' | OB | Reddit's card timing. |
-| fadeDelay | '200' | OB | Same. |
+| hoverDelay | '800' | Have | src/modules/users/userInfo.ts option hoverDelay (ms, 0 to 5000, default 800): no request is made and nothing shows until the pointer has rested that long. |
+| fadeDelay | '200' | Have | src/modules/users/userInfo.ts option fadeDelay (ms, 0 to 5000, default 200): how long after the pointer leaves the name and the card the card closes; moving into the card keeps it. |
 | fadeSpeed | '0.7' | OB | Same. |
 | gildComments | true | OB | Awards gone. |
-| highlightButton | true | Have | Re-audit 2026-10-16 + H1 (T146): src/modules/users/hoverCardActions.ts: the hover-card "highlight" word toggles the user in userHighlight's highlighted list, with its own colour. |
+| highlightButton | true | Have | Re-audit 2026-10-16 + H1 (T146): the hover-card "highlight" word toggles the user in userHighlight's highlighted list, with its own colour. Now also on REScue's own card: src/modules/users/userInfo.ts option highlightButton (shows "highlight" / "unhighlight"), sharing src/modules/users/highlightList.ts with hoverCardActions.ts. |
 | highlightColor | '#5544cc' | Have | H1 (T146): src/modules/users/userHighlight.ts option highlightColor (class rescue-highlighted-author) for users highlighted from the hover card. |
 | highlightColorHover | '#6677aa' | Have | H1 (T146): src/modules/users/userHighlight.ts option highlightColorHover: always applied while the pointer is over the name (pillCss hoverBg). |
-| +Card fields: redditor since, post karma, comment karma | - | BI | Reddit's card (cake day, karma). |
+| +Card fields: redditor since, post karma, comment karma | - | Have | src/modules/users/userInfoCard.ts: "redditor since <date> (<n> years)" and "<n> post karma · <n> comment karma" from Reddit's card (cake day, karma). |
 | +Card buttons: add/remove friend | - | BI | Reddit's follow button (Reddit follow is not the friends list). |
 | +Card buttons: message | - | BI | Reddit's chat button. |
-| +Card buttons: tag / ignore / link | - | Partial | Re-audit 2026-10-16: Partial — src/modules/users/hoverCardActions.ts: tag, ignore, highlight (No 'link' button seen). |
+| +Card buttons: tag / ignore / link | - | Have | src/modules/users/userInfoCard.ts: words tag user, ignore / unignore (only while the user tagger is on, not on your own name), highlight / unhighlight, and a profile link. |
 
 ### userbarHider
 Matrix: Built-in. 

@@ -121,6 +121,13 @@ export const oldRedditSkin = defineModule({
       title: 'Hide the subreddit banner',
       description: 'Drops the large banner picture and icon at the top of a subreddit.',
     },
+    headerScrollsAway: {
+      type: 'boolean',
+      default: false,
+      title: 'Let the top bars scroll away',
+      description:
+        'Reddit’s header (search, your profile, the REScue button) and the subreddit strip scroll away with the page, as on old Reddit, instead of staying at the top of the window. Scroll back up to reach them.',
+    },
     permalinkTop: {
       type: 'boolean',
       default: true,

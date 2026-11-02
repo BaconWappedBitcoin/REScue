@@ -49,6 +49,7 @@ import { keyboardNavExtras } from './listings/keyboardNavExtras';
 import { penaltyBox } from './users/penaltyBox';
 import { hoverCardActions } from './users/hoverCardActions';
 import { userHighlight } from './users/userHighlight';
+import { userInfo } from './users/userInfo';
 import { userTagger } from './users/userTagger';
 import { customCss } from './appearance/customCss';
 import { dashboard } from './appearance/dashboard';
@@ -95,6 +96,7 @@ export const MODULES: ModuleDefinition[] = [
   userTagger,
   userHighlight,
   hoverCardActions,
+  userInfo,
   // US6. readComments first: newCommentCount, autoHide and commentNavigator read its store.
   readComments,
   newCommentCount,

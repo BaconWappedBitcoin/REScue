@@ -86,6 +86,10 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
     since: '1.0.6',
     text: 'In the Old Reddit look, “show image” after a post’s title shows its picture, gallery or video full size right in the feed. A click on a picture in a comment now shows it full size in place instead of opening a new tab.',
   },
+  {
+    since: '1.0.7',
+    text: 'Rest the mouse on a commenter’s name to see when they joined, their karma, and tag, ignore and highlight words (User info card). The Old Reddit look can let the top bars scroll away as on old Reddit (settings › Old Reddit look › Let the top bars scroll away). REScue now has an official subreddit, r/REScueOfficial (settings › About REScue).',
+  },
 ];
 
 /** The new-feature tips an update from `from` to `to` brings. */

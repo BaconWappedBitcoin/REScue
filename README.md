@@ -12,6 +12,8 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/rescue-for-reddit/ddjbmknckcglmfohabaicadgeddpghbh"><strong>Get it for Chrome</strong></a>
+  ·
+  <a href="https://www.reddit.com/r/REScueOfficial/"><strong>r/REScueOfficial</strong></a> (the official subreddit)
 </p>
 
 ---
@@ -30,7 +32,9 @@ instead of breaking the page.
   You get the vote column with rank numbers, small thumbnails, blue titles with `(domain)`,
   "submitted 2 hours ago by user to r/sub", the flat `comments share save hide report` row, sort
   tabs, green pinned posts, thumbnails that open the link, the thin subreddit bar across the top,
-  and old-style comment heads with a `*` after an edited comment's age. It appears from the first paint, with no flash of the new design,
+  old-style comment heads with a `*` after an edited comment's age, "show image" to expand a
+  post's media in the feed, and (if you like) top bars that scroll away as on old Reddit. It
+  appears from the first paint, with no flash of the new design,
   and REScue starts while Reddit is still sending the page. Every vote and button press goes
   through Reddit's own controls.
 - **filteReddit**: hide posts by keyword, subreddit, domain, user, flair or NSFW, and collapse or
@@ -49,6 +53,9 @@ instead of breaking the page.
   vote, `s` to save, `h` to hide, go-to shortcuts, a command line, and a `?` help overlay.
 - **User tagger**: tag, colour and ignore users, with an *ignore* button on posts and comments and a
   vote tally.
+- **User info card**: rest the mouse on a commenter's name and a small card shows when they joined,
+  their post and comment karma, and *tag*, *ignore* and *highlight* words (Reddit gives comment
+  authors no card of its own).
 - **Comment tools**: macros and a big Markdown editor with a preview above the reply box, "show
   source" for a post's or comment's raw Markdown, a comment navigator, remembered collapsed
   comments, hiding child comments, "show parent" previews, sortable tables, comments saved on your
@@ -209,6 +216,9 @@ npm run zip             # store packages in .output/
 The code is TypeScript in strict mode, built with [WXT](https://wxt.dev) for Manifest V3. The
 settings console is written in Preact. The specification, plan and the full RES feature-parity
 matrix are in [`specs/001-rescue-foundation/`](specs/001-rescue-foundation/).
+
+News, questions and discussion: [r/REScueOfficial](https://www.reddit.com/r/REScueOfficial/), the official
+subreddit.
 
 Bug reports are welcome: open an [issue](https://github.com/BaconWappedBitcoin/REScue/issues).
 Please include your browser, the page address, and what you expected to happen. The settings

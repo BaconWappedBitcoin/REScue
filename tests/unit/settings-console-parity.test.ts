@@ -376,7 +376,9 @@ describe('about links', () => {
     await tick();
     const ul = el.querySelector('[data-links="about"]')!;
     const hrefs = [...ul.querySelectorAll('a')].map((a) => a.getAttribute('href') ?? '');
-    expect(hrefs).toHaveLength(5);
+    expect(hrefs).toHaveLength(6);
+    expect(hrefs).toContain('https://www.reddit.com/r/REScueOfficial/');
+    expect(ul.textContent).toContain('Official subreddit: r/REScueOfficial');
     expect(ul.textContent).toContain('Version 1.2.3');
     expect(ul.textContent).toContain('GPL-3.0');
     expect(hrefs.some((u) => u.endsWith('/issues/new'))).toBe(true);

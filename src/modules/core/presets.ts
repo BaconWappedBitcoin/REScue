@@ -35,7 +35,7 @@ export function applyPreset(
 }
 
 /** Features that open popups, switched off by the "No popups" preset (RES: hover, RESTips, showParent, ...). */
-export const POPUP_MODULES = ['hover', 'showParent', 'hoverCardActions'];
+export const POPUP_MODULES = ['hover', 'showParent', 'hoverCardActions', 'userInfo'];
 
 /**
  * RES noPopups: turn off the features that open popups and the tips, and leave everything else as

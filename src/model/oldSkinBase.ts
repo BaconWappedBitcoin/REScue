@@ -21,6 +21,8 @@ export interface OldSkinOptions {
   hideBanner: boolean;
   /** Dark mode on pure black (OLED) instead of dark grey; on unless set to false. */
   darkBlack?: boolean;
+  /** Reddit's header and the subreddit strip scroll away with the page (RES pinHeader "none"). */
+  headerScrollsAway?: boolean;
 }
 
 export const THUMB_PX: Record<ThumbnailSize, number> = {
