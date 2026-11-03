@@ -8,8 +8,10 @@
  *   .getRedirectURL()).
  * - Firefox: the value of `browser.identity.getRedirectURL()` for the add-on id
  *   `rescue@rescue-extension`: `https://<sha1-of-add-on-id>.<Firefox redirect domain>/` (seen in
- *   the wild as `….extensions.allizom.org/`; MDN does not name the domain). Read the exact value from the add-on's background console (about:debugging → Inspect →
- *   `browser.identity.getRedirectURL()`); it does not change while the add-on id stays the same.
+ *   Firefox's ext-identity.js: SHA-1 hex of the add-on id; default domain pref
+ *   `extensions.webextensions.identity.redirectDomain` = `extensions.allizom.org`). Registered:
+ *   Chrome `https://ddjbmknckcglmfohabaicadgeddpghbh.chromiumapp.org/`, Firefox
+ *   `https://a1523c8adbcf1e1227e5503eea3831bfd8282e45.extensions.allizom.org/`.
  *
  * Google (GOOGLE_CLIENT_ID): Google Cloud Console → APIs & Services → enable "Google Drive API";
  *   OAuth consent screen (External, scope `.../auth/drive.appdata`, which is non-sensitive);
@@ -26,9 +28,13 @@
  *   Microsoft Graph → Delegated → Files.ReadWrite.AppFolder and offline_access. Copy the
  *   Application (client) ID. The application name becomes the OneDrive app folder's name.
  */
-export const GOOGLE_CLIENT_ID = '';
-export const DROPBOX_APP_KEY = '';
-export const MICROSOFT_CLIENT_ID = '';
+/** Google Cloud project "REScue publishing", OAuth client "REScue sync" (Web application). */
+export const GOOGLE_CLIENT_ID =
+  '598777989019-up9i8otn37i8vcjhvkl9eojmflkeiqeu.apps.googleusercontent.com';
+/** Dropbox app "REScue for Reddit" (Scoped, App folder; development with additional users: 500). */
+export const DROPBOX_APP_KEY = 'zu19wwpg0k10r01';
+/** Entra app registration "REScue for Reddit" (any tenant + personal accounts; SPA redirects). */
+export const MICROSOFT_CLIENT_ID = 'b3789505-2042-41a3-9bc8-7e44bc849e79';
 
 /** A cloud file larger than this is refused (both directions), with a clear error. */
 export const CLOUD_MAX_BYTES = 512 * 1024;

@@ -94,6 +94,10 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
     since: '1.0.8',
     text: 'In the Old Reddit look, “show images” at the end of a feed’s tabs shows every post’s picture, gallery or video full size at once, and the controls of an expanded gallery or video now work right in the feed.',
   },
+  {
+    since: '1.0.9',
+    text: 'Settings can now follow you across browsers and computers: settings › Sync › Sync across browsers keeps one settings file in your own Google Drive, Dropbox or OneDrive (off until you connect one).',
+  },
 ];
 
 /** The new-feature tips an update from `from` to `to` brings. */

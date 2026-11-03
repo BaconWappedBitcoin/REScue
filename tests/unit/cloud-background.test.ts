@@ -25,10 +25,14 @@ beforeEach(() => {
 });
 
 describe('background cloudSync messages', () => {
-  it('reports "off" with no provider offered while the client ids are empty', async () => {
+  it('reports "off", offering only the providers that have a client id', async () => {
     expect(await send({ type: 'cloudSync.status' })).toEqual({
       ok: true,
-      available: [],
+      available: [
+        { id: 'google', label: 'Google Drive' },
+        { id: 'dropbox', label: 'Dropbox' },
+        { id: 'onedrive', label: 'OneDrive' },
+      ],
       status: 'off',
       includeTags: true,
     });
@@ -59,7 +63,7 @@ describe('background cloudSync messages', () => {
   });
 
   it('will not open the connect window for a provider that is not offered', async () => {
-    const res = (await send({ type: 'cloudSync.openConnect', provider: 'google' })) as {
+    const res = (await send({ type: 'cloudSync.openConnect', provider: 'bogus' as never })) as {
       ok: boolean;
     };
     expect(res.ok).toBe(false);
