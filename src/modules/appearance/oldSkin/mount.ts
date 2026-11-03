@@ -14,6 +14,7 @@ import { PostView } from './post';
 import { isOwn, type Ctx } from './shared';
 import { HighlightRows } from './highlights';
 import { PageName } from './pageName';
+import { resetShowAll } from './showAll';
 import { SortTabs } from './sort';
 
 /** Posts the skin draws rows for: a feed's rows and the post at the top of a thread. */
@@ -109,6 +110,7 @@ export class SkinMount {
     this.posts.clear();
     this.comments.clear();
     this.tabs.clear();
+    resetShowAll();
     this.highlights.clear();
     this.pageName.clear();
   }

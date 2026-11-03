@@ -22,6 +22,7 @@ import { h, ownQueryAll } from '../../../core/dom';
 import { parsePost } from '../../../model/post';
 import { agoText, commentsText, domainText } from '../../../model/oldSkinText';
 import { EXPANDED } from '../../../model/oldSkinFeed';
+import { showAllOn } from './showAll';
 import type { Post } from '../../../model/types';
 import type { ActionResult } from '../../../core/actions';
 import type { Route } from '../../../core/types';
@@ -65,6 +66,8 @@ export class PostView {
   private readonly thumb: HTMLElement;
   /** RES's expando: shows Reddit's own media full size under the row (feeds only). */
   private readonly expand: HTMLButtonElement;
+  /** "show images" (showAll.ts) was on when this post first offered its media: expanded once. */
+  private autoExpanded = false;
   private saved = false;
   private post: Post | null = null;
 
@@ -315,6 +318,8 @@ export class PostView {
       !!this.host.closest(C.feed) && !!this.host.querySelector(`:scope > ${C.mediaContainer}`);
     this.expand.hidden = !media;
     if (!media) return setAttr(this.host, EXPANDED, null);
+    if (!this.autoExpanded && showAllOn()) setAttr(this.host, EXPANDED, '');
+    this.autoExpanded = true;
     const open = this.host.hasAttribute(EXPANDED);
     const kind = video ? 'video' : gallery ? 'gallery' : 'image';
     setText(this.expand, `${open ? 'hide' : 'show'} ${kind}`);

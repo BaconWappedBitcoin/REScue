@@ -205,6 +205,18 @@ export const hint = {
   mediaPermAllow: r('ask the browser for permission to block downloads from Reddit media servers'),
   mediaPermCancel: r('close this window without giving permission'),
 
+  // --- cloud sync (settings console Sync page, and the connect window) --------------------------
+  cloudConnect: (provider: string): string =>
+    r(`open a window to connect ${provider} and keep your settings there, in REScue's own folder`),
+  cloudReconnect: (p: string): string => r(`sign in to ${p} again so REScue can keep syncing`),
+  cloudSyncNow: r('sync your settings with your cloud storage now'),
+  cloudDisconnect: r('stop syncing and forget the sign-in on this browser (the cloud file stays)'),
+  cloudRestore: r('put back the settings this browser had before the last cloud copy came in'),
+  cloudTags: (on: boolean): string =>
+    r(on ? 'tags are synced too. Click to sync settings only' : 'click to sync your user tags too'),
+  cloudConnectContinue: r('ask the browser for permission, then sign in to your storage provider'),
+  cloudConnectCancel: r('close this window without connecting anything'),
+
   // --- marks beside a post or comment ----------------------------------------------------------
   singleClick: (both: boolean): string =>
     both

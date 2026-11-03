@@ -522,3 +522,17 @@ tr.drop-target td {
 .copy-hint {
   font-size: 12px;
 }
+
+/* Sync page: "Sync across browsers" (cloud sync). */
+.cloud-sync {
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.cloud-sync h3 {
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+.cloud-sync .cloud-error {
+  color: var(--rescue-danger, #c33333);
+}

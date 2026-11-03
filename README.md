@@ -147,7 +147,7 @@ By RES module:
 
 | RES module | REScue |
 |---|---|
-| **Settings, backup and restore, presets, command line, troubleshooter** | In REScue. Backup is a file you keep, or your browser's own sync; there is no Dropbox or Google Drive. Your RES backup's tags and filters can be imported. |
+| **Settings, backup and restore, presets, command line, troubleshooter** | In REScue. Backup is a file you keep, your browser's own sync, or (opt-in) one settings file in your own Google Drive, Dropbox or OneDrive. Your RES backup's tags and filters can be imported. |
 | **filteReddit** | In REScue: keywords, subreddits, domains, users, flair and NSFW for posts; keyword, user, score and depth for comments; each with a reason and a way to reveal it. |
 | **Keyboard navigation** | In REScue: `j`/`k`, open, vote, save, hide, go-to keys and the help overlay. Voting on comments from the keyboard works through Reddit's own buttons. |
 | **User tagger, user highlight** | In REScue: tags, colours, ignore (now with an ignore button), vote tally, and highlights for moderators, friends and tagged users. |
@@ -180,6 +180,8 @@ REScue has **no accounts, no analytics, no telemetry and no servers**.
   browser sync, your settings are copied to your browser's own sync.
 - Its own network access is limited, in code, to read-only requests to the Reddit page you are on,
   only for the few features that need them.
+- Optional, off by default: "Sync across browsers" keeps one settings file in your own Google
+  Drive, Dropbox or OneDrive app folder; it goes only to the provider you connect, never to REScue.
 - It never sees, stores or sends your password or tokens.
 
 Votes, saves, hides and reports are done by pressing Reddit's own buttons, so Reddit's page makes

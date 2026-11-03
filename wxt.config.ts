@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'wxt';
 import preact from '@preact/preset-vite';
 import { noInnerHtml } from './scripts/no-inner-html';
+import { CLOUD_PROVIDER_ORIGINS } from './src/contracts/cloud';
 
 // Reddit origins REScue runs on. old.reddit.com is handled by its own small entrypoint.
 export const REDDIT_MATCHES = ['*://www.reddit.com/*', '*://reddit.com/*', '*://sh.reddit.com/*'];
@@ -40,15 +41,29 @@ export default defineConfig({
     // Firefox does not accept declarativeNetRequest as an optional permission. There REScue holds
     // declarativeNetRequestWithHostAccess (no install warning), which can only act on hosts the
     // user also granted, and *.redd.it stays optional: blocking is still opt-in.
+    // `alarms`: the 15-minute cloud sync check (no install warning, does nothing until the user
+    // connects a storage provider). Firefox does not accept `identity` as an optional permission
+    // (MDN optional_permissions list), so there it is required; it shows no install warning and is
+    // used only when the user connects cloud sync. Chrome asks for it when the user connects.
     permissions:
       browser === 'firefox'
-        ? ['storage', 'unlimitedStorage', 'scripting', 'declarativeNetRequestWithHostAccess']
-        : ['storage', 'unlimitedStorage', 'scripting'],
+        ? [
+            'storage',
+            'unlimitedStorage',
+            'scripting',
+            'declarativeNetRequestWithHostAccess',
+            'alarms',
+            'identity',
+          ]
+        : ['storage', 'unlimitedStorage', 'scripting', 'alarms'],
     host_permissions: REDDIT_MATCHES,
-    // Asked for only when the user turns on "Block media downloads" (inlineMedia), from the
-    // extension's own permission page; nothing here is granted at install.
-    ...(browser === 'firefox' ? {} : { optional_permissions: ['declarativeNetRequest'] }),
-    optional_host_permissions: ['*://*.redd.it/*'],
+    // Asked for only when the user turns on "Block media downloads" (inlineMedia), or connects a
+    // cloud storage provider (only that provider's API hosts), from the extension's own pages;
+    // nothing here is granted at install.
+    ...(browser === 'firefox'
+      ? {}
+      : { optional_permissions: ['declarativeNetRequest', 'identity'] }),
+    optional_host_permissions: ['*://*.redd.it/*', ...Object.values(CLOUD_PROVIDER_ORIGINS).flat()],
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {

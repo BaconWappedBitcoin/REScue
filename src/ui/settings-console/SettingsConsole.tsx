@@ -15,6 +15,7 @@ import {
   groupByCategory,
   type ConsoleCategory,
 } from './categories';
+import { CLOUD_TEXT, CLOUD_TITLE, CloudSyncPanel } from './CloudSync';
 import { ModuleSection } from './ModuleSection';
 import { CategoryOverview, SearchResults, type ExtraHit } from './Overview';
 import { matchModule, searchModules, textMatches } from './search';
@@ -152,7 +153,8 @@ export function SettingsConsole({ settings, runAction, target, onClose }: Props)
   );
   const extra: ExtraHit[] = useMemo(
     () =>
-      searching && (textMatches(SYNC_TITLE, query) || textMatches(SYNC_TEXT, query))
+      searching &&
+      [SYNC_TITLE, SYNC_TEXT, CLOUD_TITLE, CLOUD_TEXT].some((t) => textMatches(t, query))
         ? [{ id: SYNC_ID, title: SYNC_TITLE, text: SYNC_TEXT }]
         : [],
     [query, searching],
@@ -278,6 +280,7 @@ export function SettingsConsole({ settings, runAction, target, onClose }: Props)
                     />{' '}
                     {SYNC_TEXT}
                   </label>
+                  <CloudSyncPanel onSettingsReplaced={() => setProfile(settings.profile())} />
                 </section>
               ) : def ? (
                 <ModuleSection

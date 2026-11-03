@@ -16,6 +16,7 @@ import {
   type SortTab,
 } from '../../../model/oldSkinText';
 import { setAttr } from './shared';
+import { showAllButton } from './showAll';
 
 export const TABS_ATTR = C.skin.tabsAttr;
 
@@ -93,6 +94,11 @@ export class SortTabs {
       this.nav = next;
       this.signature = sig;
     }
+    // RES's "show images" ends the row on a feed (expands every post's media; showAll.ts).
+    const all = showAllButton();
+    if (tabs.length || feeds.length) {
+      if (all.parentElement !== this.nav) this.nav.append(all);
+    } else all.remove();
     if (this.nav.nextElementSibling !== anchor) anchor.before(this.nav);
     if (dropdown) setAttr(dropdown, TABS_ATTR, '1');
   }

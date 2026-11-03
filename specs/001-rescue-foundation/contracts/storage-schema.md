@@ -15,6 +15,8 @@
 | `hiddenPosts` | `Record<postId, timestamp>` | >90 days |
 | `threadSubscriptions` | `Record<postId, Sub>` (threadSubscriptions); written at once, not debounced. Before 2026-10-21 it was the raw key `rescue-subs:threadSubscriptions`, which the module moves here once and deletes | each watch ends after its chosen days |
 | `mod:<moduleId>` | module-private scoped store | module-declared |
+| `cloudSync` | opt-in cloud sync state (src/core/cloudSync/engine.ts): provider, random `device` id, `includeTags`, `lastAppliedAt`, `lastHash`, `localChangedAt`, `lastSyncedAt`, status/error/backoff, and `previous` (the profile and tags a cloud copy replaced, one level of undo). Not exported | never |
+| `cloudSyncAuth` | the connected provider's OAuth tokens. Only here: never storage.sync, never exported, never logged | removed on disconnect |
 
 All writes go through typed stores that debounce (250 ms) and batch. A failed write keeps its
 values for the next write (newer values win) and is reported once; removing keys drops pending
@@ -28,6 +30,15 @@ local profile wins. Tags and filters are excluded because sync quotas are too sm
 data. They travel through the export file instead.
 
 The other direction (T147): when the synced copy changes on another device and sync is on, the background compares hashes and either asks (default; `backupAndRestore.warnBeforeAutomaticRestore`) or applies it. It keeps `syncState: { knownHash, pendingHash }` in `storage.local` (not exported) so a copy this device wrote, applied or declined is not asked about again. Before applying a synced copy it saves this device's previous settings as `settingsBeforeSync: { at, previous }` (not exported), so a bad copy can be undone by hand.
+
+## Cloud file (opt-in "Sync across browsers")
+
+One file, `rescue-sync.json`, in the connected provider's app-only folder:
+`{ format: "rescue-sync", formatVersion: 1, schemaVersion, updatedAt, device, settings, tags? }`.
+`settings` is the profile (its `syncEnabled` is written as false and never applied: each browser
+keeps its own storage.sync switch), `tags` is `userTags` when the user syncs tags. Reading it runs
+the backup import's validation and migrations (parseBackup, then normalizeProfile). Capped at
+512 KB. Last writer wins by `updatedAt`; while connected, it (not storage.sync) decides settings.
 
 ## Migrations
 

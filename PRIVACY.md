@@ -2,7 +2,9 @@
 
 REScue has no telemetry, analytics, tracking, accounts, or servers of its own. It collects nothing
 and sends nothing anywhere except to Reddit itself, and only for the few features listed below,
-only when you use them. It reads and decorates the Reddit page you are already looking at, and
+only when you use them. The one exception is a feature that is off until you connect it: syncing
+your settings through **your own** Google Drive, Dropbox or OneDrive (see "Optional: sync across
+browsers" below). It reads and decorates the Reddit page you are already looking at, and
 keeps its data on your device.
 
 ## What stays on your device
@@ -15,6 +17,8 @@ permission only so that large tag, filter and read-history lists are never evict
   storage, which your browser vendor operates (Chrome Sync, Firefox Sync). The profile holds module
   options, which include filter rules and lists you typed into settings. User tags, subreddit tags,
   saved comments, hidden posts and read history are not synced.
+- If you connect **sync across browsers**, your settings profile (and, unless you turn it off,
+  your user tags) is also kept as one file in your own cloud storage; see below.
 - Threads you "subscribe" to are kept in the same storage, each with its title, link and last
   comment count, until the watch ends (2 days by default) or you unsubscribe. They are not synced.
 - Tags leave your device only in a backup file you export yourself. Importing a backup
@@ -44,7 +48,9 @@ it permits exactly one kind of destination: Reddit's own origin (`www.reddit.com
 `sh.reddit.com`, the page you are on), carrying your existing Reddit session. Any other
 destination is refused, and `oauth.reddit.com` in particular is never used. REScue never loads
 images, scripts, frames, fonts or media from any host, and its background worker makes no
-requests.
+requests to Reddit. The only requests the background makes are those of the opt-in cloud sync
+described below, through a separate, narrow path in the same file that only the background can
+use and that only reaches the storage provider you connected.
 
 Every request is a **read-only GET** (REScue never sends a POST, PUT, PATCH or DELETE; `net.ts`
 refuses any other method, and any request body, before anything leaves). If Reddit answers with a
@@ -111,6 +117,44 @@ audience-partisanship scores (Eady et al. 2025 for about 180 major outlets and R
 right settings and your allow-list of domains) are ordinary module options, stored and synced like
 the rest of your settings. Nothing about which domains you see or hide is sent anywhere.
 
+## Optional: sync across browsers (your own cloud storage)
+
+Off by default, and nothing below happens until you connect a provider in REScue settings, under
+Sync. Browser sync only works between browsers of one brand; this keeps your settings the same in
+every browser and on every computer where you connect the same account.
+
+- **What is sent:** one small JSON file, `rescue-sync.json`, holding your settings profile (module
+  options, which include filter rules and lists you typed into settings, and keyboard shortcuts)
+  and, unless you untick "also sync user tags", your user tags. It also holds the time it was
+  written and a random id for this browser installation (not tied to you or your device). Read
+  history, saved comments, hidden posts, thread subscriptions and other cached data are never sent.
+- **Where it goes:** only to the provider you connect, into an app-only folder that REScue alone
+  can use: Google Drive's hidden app data folder (`drive.appdata`), Dropbox's `Apps/<app name>`
+  folder (an "App folder" app), or OneDrive's `Apps/<app name>` folder
+  (`Files.ReadWrite.AppFolder`). REScue cannot see any of your other files. There is no REScue
+  server: the file goes straight from your browser to your provider, and REScue's developer never
+  receives it.
+- **Which hosts:** when you connect, the browser asks you for access to that provider's API hosts
+  only (Google: `www.googleapis.com`, `oauth2.googleapis.com`; Dropbox: `api.dropboxapi.com`,
+  `content.dropboxapi.com`; OneDrive: `login.microsoftonline.com`, `graph.microsoft.com`, and the
+  provider's own download address it hands out for the file). In Chrome it also asks for the
+  `identity` permission, which shows the provider's sign-in window; Firefox does not allow that
+  permission to be optional, so there it is part of the install, unused until you connect.
+  Requests never carry cookies, and only REScue's background page can make them.
+- **When:** when the browser starts, when you connect, every 15 minutes, about 10 seconds after
+  you change settings or tags, and when you press "sync now". It writes only when something
+  changed. If the cloud copy is newer and came from another browser, it replaces this browser's
+  settings; the settings it replaced are kept on this device so you can "restore previous".
+- **Sign-in:** the provider's own sign-in page asks you to allow access. REScue keeps the access
+  (and, for Dropbox and OneDrive, refresh) tokens only in this browser's local extension storage;
+  they are never synced, never put in a backup file, and never logged or shown. For Google, REScue
+  gets a one-hour token and renews it silently while you stay signed in to Google.
+- **Stopping and deleting:** press "disconnect" in REScue settings, under Sync. That deletes the
+  tokens on this browser (and, for Google and Dropbox, also tells the provider to revoke them). It
+  does not delete the file: delete `rescue-sync.json` from the app folder in your storage yourself
+  (for Google Drive: Drive settings, "Manage apps", "Delete hidden app data"). You can also remove
+  REScue's access in your Google, Dropbox or Microsoft account settings at any time.
+
 ## Requests made by Reddit's own page
 
 Reddit's page makes its own requests, including to advertising and analytics providers. REScue
@@ -121,13 +165,16 @@ blocker (use one such as uBlock Origin for that).
 
 ## Credentials
 
-REScue never asks for, stores, or transmits your Reddit password or any access token.
+REScue never asks for, stores, or transmits your Reddit password or any Reddit token. The only
+tokens it ever holds are those of the cloud storage provider you chose to connect (see above),
+kept in this browser's local extension storage and sent only to that provider.
 
 ## Where REScue runs
 
 The extension has access to `reddit.com`, `www.reddit.com` and `sh.reddit.com` only, and requests
 no other site access at install. Only if you turn on "Block media downloads" does it ask, as an
-optional permission, for `*.redd.it` (see above). It runs a small redirect script on
+optional permission, for `*.redd.it` (see above), and only if you connect cloud sync does it ask
+for that one provider's API hosts (see above). It runs a small redirect script on
 `old.reddit.com`.
 
 ## Changes

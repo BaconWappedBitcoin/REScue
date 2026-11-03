@@ -11,6 +11,7 @@
 import { defineModule } from '../../core/types';
 import { ownBody } from '../../model/access';
 import { C } from '../../contracts/reddit';
+import { EXPANDED } from '../../model/oldSkinFeed';
 
 export const MARK = 'data-rescue-newtab';
 
@@ -43,10 +44,12 @@ export function postLinkOf(target: Element): string | null {
   if (!post) return null;
   const title = target.closest('a.rescue-otitle');
   if (title) return title.getAttribute('href');
+  // Media the reader expanded with "show image" is Reddit's own again: its controls keep the click.
   const thumb =
     target.closest('.rescue-oth') ||
     (target.closest(C.mediaContainer)?.parentElement === post &&
       post.hasAttribute(C.skin.mountAttr) &&
+      !post.hasAttribute(EXPANDED) &&
       !!post.closest(C.feed));
   return thumb ? (post.querySelector('a.rescue-otitle')?.getAttribute('href') ?? null) : null;
 }

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>REScue: connect cloud storage</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font:
+          14px/1.5 system-ui,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+      }
+      h1 {
+        font-size: 17px;
+        margin: 0 0 12px;
+      }
+      button {
+        font: inherit;
+        padding: 6px 14px;
+        margin-right: 8px;
+        cursor: pointer;
+      }
+      .small {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      #result {
+        margin-top: 14px;
+        min-height: 1.5em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="title">Sync across browsers</h1>
+    <p>
+      REScue will keep one small file with your settings (and your user tags, unless you turn that
+      off) in the app folder of your own <b id="provider">cloud storage</b>. Every browser where you
+      connect the same account gets the same settings.
+    </p>
+    <p>
+      The file goes only to your storage provider. REScue has no server and never sees it. Read
+      history, saved comments and hidden posts are never sent.
+    </p>
+    <p>
+      Next, the browser asks you to let REScue talk to <span id="hosts"></span>, then the provider
+      asks you to sign in and allow access to that one folder.
+    </p>
+    <p>
+      <button id="allow" type="button">Continue</button>
+      <button id="cancel" type="button">Not now</button>
+    </p>
+    <div id="result" role="status"></div>
+    <p class="small">You can disconnect at any time in REScue settings, under Sync.</p>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -90,6 +90,10 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
     since: '1.0.7',
     text: 'Rest the mouse on a commenter’s name to see when they joined, their karma, and tag, ignore and highlight words (User info card). The Old Reddit look can let the top bars scroll away as on old Reddit (settings › Old Reddit look › Let the top bars scroll away). REScue now has an official subreddit, r/REScueOfficial (settings › About REScue).',
   },
+  {
+    since: '1.0.8',
+    text: 'In the Old Reddit look, “show images” at the end of a feed’s tabs shows every post’s picture, gallery or video full size at once, and the controls of an expanded gallery or video now work right in the feed.',
+  },
 ];
 
 /** The new-feature tips an update from `from` to `to` brings. */

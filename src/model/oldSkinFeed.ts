@@ -82,7 +82,10 @@ export function feedCss(o: OldSkinOptions): string {
     `${P} ${s.thumbnail} > a { width: 100%; height: auto; }`,
     // A large picture or video (shape B) shrinks to thumbnail size (zoom scales the whole box), or goes away.
     `${P} > ${C.mediaContainer} { grid-area: 1 / 3; width: 583px; zoom: ${(px / 583).toFixed(4)}; height: 583px; overflow: hidden; background: var(--os-panel); margin: 4px 0 !important; ${none ? 'display: none;' : ''} }`,
-    `${P} > ${C.mediaContainer} * { pointer-events: none; }`,
+    // Shrunk to a thumbnail, the media takes no clicks of its own (the thumbnail opens the post).
+    // Expanded, nothing is set, so Reddit's own pointer-events stay as Reddit wrote them (its
+    // click-through overlays must not catch the gallery's arrows).
+    `${P}:not([${EXPANDED}]) > ${C.mediaContainer} * { pointer-events: none; }`,
     // RES's expando: "show image" (post.ts) brings Reddit's own media back at full size in the
     // second row, indented under the title, and the parking moves to a 0-high third row at the
     // bottom (still clipped). The media spans its whole row, so the auto-placed pieces of Reddit's
@@ -90,7 +93,6 @@ export function feedCss(o: OldSkinOptions): string {
     `${P}[${EXPANDED}] { grid-template-rows: auto auto 0px; }`,
     `${P}[${EXPANDED}] > :not(.rescue-ovote, .rescue-oth, .rescue-obody, ${C.mediaContainer}), ${P}[${EXPANDED}] > ${k.wrapA} > :not(${k.wrapAThumb}) { grid-area: 3 / 1; }`,
     `${P}[${EXPANDED}]:has(> ${C.mediaContainer}) > ${C.mediaContainer} { display: block !important; grid-area: 2 / 1 / 3 / -1; zoom: 1; width: auto; max-width: min(720px, calc(100% - ${indent}px)); height: auto; overflow: visible; margin: 4px 0 10px ${indent}px !important; }`,
-    `${P}[${EXPANDED}] > ${C.mediaContainer} * { pointer-events: auto; }`,
     `${P}[${EXPANDED}][${EXPANDED}] ${k.videoPlayer} { display: block !important; }`,
     // Reddit's credit bar stays alive (its overflow menu is how save / hide / report are pressed) but unseen.
     `${P} ${s.credit} { position: absolute !important; left: 0; top: 0; width: 1px; height: 1px; margin: 0 !important; padding: 0 !important; clip-path: inset(50%); pointer-events: none; }`,

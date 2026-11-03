@@ -17,11 +17,26 @@ const PREVIEW =
   'https://preview.redd.it/a-picture-v0-abc123.jpeg?width=1284&format=pjpg&auto=webp&s=0123';
 
 /** The listing with Reddit's own media container on the first post. */
-const listingWithMedia = () =>
-  listing().replace(
-    '</shreddit-post>',
-    `<div slot="post-media-container"><img id="post-pic" src="${PIC}" width="900" height="600"></div></shreddit-post>`,
-  );
+/**
+ * A control inside the media under a click-through overlay, as Reddit draws a gallery's arrows
+ * (live 2026-11-03: a `pointer-events-none` layer covers the carousel).
+ */
+const MEDIA_CONTROL =
+  '<button id="media-btn" style="position:absolute;left:10px;top:10px" onclick="this.dataset.hit=1">next</button>' +
+  '<style>.pointer-events-none{pointer-events:none}</style>' +
+  '<div class="pointer-events-none" style="position:absolute;inset:0"></div>';
+
+/** The listing with Reddit's own media container on the first and third posts (the second is text). */
+const listingWithMedia = () => {
+  let n = 0;
+  return listing().replace(/<\/shreddit-post>/g, (end) => {
+    n++;
+    const id = n === 1 ? 'post-pic' : n === 3 ? 'post-pic-3' : null;
+    return id
+      ? `<div slot="post-media-container" style="position:relative"><img id="${id}" src="${PIC}" width="900" height="600">${n === 1 ? MEDIA_CONTROL : ''}</div>${end}`
+      : end;
+  });
+};
 
 /** The thread with a picture in the first comment, drawn as Reddit draws it (240px wide at most). */
 const threadWithPicture = () =>
@@ -100,6 +115,55 @@ test('"show image" on a feed post shows its picture full size under the row, and
   await word.click();
   await expect(word).toHaveText('show image');
   await expect.poll(() => width(p, '#post-pic')).toBeLessThan(150);
+});
+
+test('"show images" in the tab row expands every post with media, and "hide images" puts them back', async () => {
+  const p = await open(LISTING, { oldRedditSkin: { enabled: true, options: {} } });
+  const posts = p.locator('shreddit-post');
+  await expect(posts.first()).toHaveAttribute('data-rescue-ov', '1');
+  const all = p.locator('.rescue-otabs .rescue-oshowall');
+  await expect(all).toHaveText('show images');
+  await expect(all).toHaveAttribute('title', /^REScue: /);
+  await all.click();
+  await expect(all).toHaveText('hide images');
+  await expect(all).toHaveAttribute('aria-pressed', 'true');
+  await expect(posts.nth(0)).toHaveAttribute('data-rescue-oexp', '');
+  await expect(posts.nth(2)).toHaveAttribute('data-rescue-oexp', '');
+  await expect(posts.nth(1)).not.toHaveAttribute('data-rescue-oexp', ''); // a text post
+  await expect(posts.nth(0).locator('.rescue-oexpand')).toHaveText('hide image');
+  await expect.poll(() => width(p, '#post-pic-3')).toBeGreaterThan(400);
+  // One post can still be put back on its own.
+  await posts.nth(0).locator('.rescue-oexpand').click();
+  await expect(posts.nth(0)).not.toHaveAttribute('data-rescue-oexp', '');
+  await all.click();
+  await expect(all).toHaveText('show images');
+  await expect(posts.nth(2)).not.toHaveAttribute('data-rescue-oexp', '');
+  await expect(posts.nth(0)).not.toHaveAttribute('data-rescue-oexp', '');
+});
+
+test('with links opening in a new tab, a click inside expanded media stays with the media; the thumbnail still opens a tab', async () => {
+  const p = await open(LISTING, {
+    oldRedditSkin: { enabled: true, options: {} },
+    linksNewTab: { enabled: true, options: { postLinks: true } },
+  });
+  const post = p.locator('shreddit-post').first();
+  await expect(post).toHaveAttribute('data-rescue-ov', '1');
+  // Collapsed, the picture is the thumbnail: a click opens the post in a new tab.
+  const first = ctx.waitForEvent('page');
+  await p.locator('#post-pic').click({ force: true });
+  await (await first).close();
+
+  await post.locator('.rescue-oexpand').click();
+  await expect.poll(() => width(p, '#post-pic')).toBeGreaterThan(400);
+  const pages = ctx.pages().length;
+  // A click inside the expanded media (a gallery arrow, the player) is the media's own, and
+  // reaches a control under Reddit's click-through overlay.
+  await p.locator('#media-btn').click({ timeout: 3000 });
+  await expect(p.locator('#media-btn')).toHaveAttribute('data-hit', '1');
+  await p.locator('#post-pic').click();
+  await p.waitForTimeout(600);
+  expect(ctx.pages().length).toBe(pages);
+  expect(p.url()).toBe(LISTING);
 });
 
 test('a click on a picture in a comment shows it full size in place; Ctrl+click is left to Reddit', async () => {

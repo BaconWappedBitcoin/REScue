@@ -21,6 +21,7 @@ import {
   type BlockApi,
   type DnrLike,
 } from '../core/mediaBlock';
+import { setupCloudSync, type CloudSyncMessage } from '../core/cloudSync/service';
 
 export type BackgroundMessage =
   | { type: 'settings.changed' }
@@ -36,13 +37,20 @@ export type BackgroundMessage =
   | { type: 'tabs.open'; urls: string[]; active: boolean }
   | { type: 'sync.status' }
   | { type: 'sync.apply' }
-  | { type: 'sync.keep' };
+  | { type: 'sync.keep' }
+  | CloudSyncMessage;
 
 const REDDIT_TABS = ['*://www.reddit.com/*', '*://reddit.com/*', '*://sh.reddit.com/*'];
 const HIDDEN_POSTS_MAX_AGE_MS = 90 * 86_400_000;
 
 export default defineBackground(() => {
   const health = new Map<number, unknown>();
+  // Opt-in sync through the user's own cloud storage (src/core/cloudSync/). A copy applied from
+  // the cloud reaches open tabs and the browser's own sync like any other settings change.
+  const cloud = setupCloudSync(async () => {
+    await broadcastSettingsChanged();
+    await mirrorSettingsToSync();
+  });
 
   async function migrateAndPrune(): Promise<void> {
     const all = (await browser.storage.local.get(null)) as StoredData;
@@ -123,6 +131,8 @@ export default defineBackground(() => {
         }
       | undefined;
     if (!local || local.syncEnabled !== true) return;
+    // With cloud sync connected, the cloud copy is the source of truth for settings.
+    if (await cloud.active()) return;
     const synced = await readSynced();
     const state = await syncState();
     const decision = decideSyncRestore({
@@ -202,6 +212,8 @@ export default defineBackground(() => {
   browser.permissions?.onRemoved?.addListener(reconcileBlocking);
 
   browser.runtime.onMessage.addListener((raw: unknown, sender) => {
+    const cloudReply = cloud.onMessage(raw, sender);
+    if (cloudReply) return cloudReply;
     const msg = raw as BackgroundMessage;
     switch (msg?.type) {
       case 'settings.changed':
