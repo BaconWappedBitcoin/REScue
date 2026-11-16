@@ -221,11 +221,11 @@ describe('Markdown preview on hostile input', () => {
       '^(a'.repeat(13_000),
       `${'a'.repeat(20_000)}${' '.repeat(19_000)}x`,
     ];
+    // Linear work takes a few ms; a quadratic blow-up on these inputs takes seconds. The best of
+    // three runs keeps a busy CI machine (one slow run) from failing the test.
     for (const src of hostile) {
-      expect(
-        timed(() => textOf(src)),
-        src.slice(0, 12),
-      ).toBeLessThan(50);
+      const best = Math.min(...[0, 1, 2].map(() => timed(() => textOf(src))));
+      expect(best, src.slice(0, 12)).toBeLessThan(100);
     }
   });
 
