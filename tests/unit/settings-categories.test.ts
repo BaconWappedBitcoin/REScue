@@ -42,6 +42,7 @@ const EXPECTED: Record<string, ConsoleCategory> = {
   subredditTagger: 'subreddits',
   subredditManager: 'subreddits',
   neutralityFilter: 'subreddits',
+  topicFilters: 'subreddits',
   voteEnhancements: 'appearance',
   stylesheet: 'appearance',
   styleTweaks: 'appearance',

@@ -15,6 +15,7 @@ import { about, troubleshooter } from './core/troubleshooter';
 import { singleClick, wheelBrowse } from './listings/browsing';
 import { filteReddit } from './listings/filteReddit';
 import { neutralityFilter } from './listings/neutralityFilter';
+import { topicFilters } from './listings/topicFilters';
 import { interstitials } from './listings/interstitials';
 import { keyboardNav } from './listings/keyboardNav';
 import { keyboardActions } from './actions/keyboardActions';
@@ -144,4 +145,5 @@ export const MODULES: ModuleDefinition[] = [
   // After every label, so the ⊘ filter button is the last thing in a post's credit bar.
   filteReddit,
   neutralityFilter,
+  topicFilters,
 ] as ModuleDefinition[];

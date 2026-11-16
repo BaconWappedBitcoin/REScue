@@ -123,6 +123,7 @@ const BY_MODULE_ID: Record<string, ConsoleCategory> = {
   easterEgg: 'appearance',
   oldRedditSkin: 'appearance',
   neutralityFilter: 'subreddits',
+  topicFilters: 'subreddits',
   interstitials: 'browsing',
   oldRedditRedirect: 'browsing',
   linksNewTab: 'comments',

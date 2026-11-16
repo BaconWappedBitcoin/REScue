@@ -98,6 +98,10 @@ export const NEW_FEATURE_TIPS: Array<{ since: string; text: string }> = [
     since: '1.0.9',
     text: 'Settings can now follow you across browsers and computers: settings › Sync › Sync across browsers keeps one settings file in your own Google Drive, Dropbox or OneDrive (off until you connect one).',
   },
+  {
+    since: '1.0.10',
+    text: 'Topic filters hide a whole topic’s subreddits at once (sports, anime, politics and more): tick a topic in the REScue menu’s Topic filters row.',
+  },
 ];
 
 /** The new-feature tips an update from `from` to `to` brings. */

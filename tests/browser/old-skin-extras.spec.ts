@@ -76,7 +76,10 @@ test('an edited comment’s age gets old Reddit’s "*" with "last edited … ag
   await expect(c).toHaveAttribute('data-rescue-ov', '1');
   const star = c.locator('.rescue-oedited').first();
   await expect(star).toHaveText('*');
-  await expect(star).toHaveAttribute('title', /^last edited \d+ days? ago$/);
+  await expect(star).toHaveAttribute(
+    'title',
+    /^last edited \d+ (?:minute|hour|day|month|year)s? ago$/,
+  );
   // Only the edited comment: the others have no marker.
   await expect(p.locator('.rescue-oedited:visible')).toHaveCount(1);
 });

@@ -49,12 +49,15 @@ instead of breaking the page.
   You can also hide far-left and far-right domains, with separate strictness for each side. Scores
   come from two published, CC0-licensed research datasets bundled with the extension. Nothing is
   looked up online.
+- **Topic filters**: hide a whole topic (sports, anime, politics, news, video games, memes and
+  more) in one switch from the REScue menu. Each topic is a bundled list of subreddits; you can add
+  your own and exempt any. Nothing is hidden until you switch a topic on.
 - **Keyboard navigation**: `j`/`k` to move between posts and comments, `Enter` to open, `a`/`z` to
   vote, `s` to save, `h` to hide, go-to shortcuts, a command line, and a `?` help overlay.
-- **User tagger**: tag, colour and ignore users, with an *ignore* button on posts and comments and a
+- **User tagger**: tag, colour and ignore users, with an _ignore_ button on posts and comments and a
   vote tally.
 - **User info card**: rest the mouse on a commenter's name and a small card shows when they joined,
-  their post and comment karma, and *tag*, *ignore* and *highlight* words (Reddit gives comment
+  their post and comment karma, and _tag_, _ignore_ and _highlight_ words (Reddit gives comment
   authors no card of its own).
 - **Comment tools**: macros and a big Markdown editor with a preview above the reply box, "show
   source" for a post's or comment's raw Markdown, a comment navigator, remembered collapsed
@@ -119,10 +122,10 @@ npm run build            # Chrome:  .output/chrome-mv3/
 npm run build:firefox    # Firefox: .output/firefox-mv3/
 ```
 
-- **Chrome, Edge or Brave:** open `chrome://extensions`, turn on *Developer mode*, click *Load
-  unpacked*, and choose `.output/chrome-mv3`.
-- **Firefox or LibreWolf:** open `about:debugging#/runtime/this-firefox`, click *Load Temporary
-  Add-on*, and choose `.output/firefox-mv3/manifest.json`. Firefox removes temporary add-ons when
+- **Chrome, Edge or Brave:** open `chrome://extensions`, turn on _Developer mode_, click _Load
+  unpacked_, and choose `.output/chrome-mv3`.
+- **Firefox or LibreWolf:** open `about:debugging#/runtime/this-firefox`, click _Load Temporary
+  Add-on_, and choose `.output/firefox-mv3/manifest.json`. Firefox removes temporary add-ons when
   it restarts.
 
 Then open Reddit. The **REScue** button in Reddit's header opens the menu and the settings console.
@@ -135,33 +138,33 @@ rest.
 
 The project's own audit checks every RES option and control, 707 in all:
 
-| | Options | What it means |
-|---|---:|---|
-| **In REScue** | 394 | Works on modern Reddit. |
-| **Partly** | 82 | The main behaviour works; details differ (each one is noted in the audit). |
-| **Reddit does it** | 47 | Modern Reddit has its own version, so REScue doesn't duplicate it. |
-| **Obsolete** | 132 | The Reddit feature it changed is gone (old Reddit's sidebar, per-subreddit CSS, `?depth=` links and so on). |
-| **Not yet** | 52 | Possible, but each needs a workaround that hasn't been built yet. |
+|                    | Options | What it means                                                                                               |
+| ------------------ | ------: | ----------------------------------------------------------------------------------------------------------- |
+| **In REScue**      |     394 | Works on modern Reddit.                                                                                     |
+| **Partly**         |      82 | The main behaviour works; details differ (each one is noted in the audit).                                  |
+| **Reddit does it** |      47 | Modern Reddit has its own version, so REScue doesn't duplicate it.                                          |
+| **Obsolete**       |     132 | The Reddit feature it changed is gone (old Reddit's sidebar, per-subreddit CSS, `?depth=` links and so on). |
+| **Not yet**        |      52 | Possible, but each needs a workaround that hasn't been built yet.                                           |
 
 By RES module:
 
-| RES module | REScue |
-|---|---|
-| **Settings, backup and restore, presets, command line, troubleshooter** | In REScue. Backup is a file you keep, your browser's own sync, or (opt-in) one settings file in your own Google Drive, Dropbox or OneDrive. Your RES backup's tags and filters can be imported. |
-| **filteReddit** | In REScue: keywords, subreddits, domains, users, flair and NSFW for posts; keyword, user, score and depth for comments; each with a reason and a way to reveal it. |
-| **Keyboard navigation** | In REScue: `j`/`k`, open, vote, save, hide, go-to keys and the help overlay. Voting on comments from the keyboard works through Reddit's own buttons. |
-| **User tagger, user highlight** | In REScue: tags, colours, ignore (now with an ignore button), vote tally, and highlights for moderators, friends and tagged users. |
-| **Comment navigator, hide child comments, show parent, remember collapsed comments, new comment count, saved comments, table tools** | In REScue. |
-| **Comment tools (macros, big editor), view source, message menu, multireddit bar** | In REScue: macros and a big Markdown editor with a preview above the reply box, "source" for raw Markdown, and "mail ▾" and "feeds ▾" menus on the shortcut bar. |
-| **Night mode** | In REScue: always dark, always light, or follow Reddit's own switch (Reddit's switch still works too). |
-| **Never-ending Reddit** | Reddit scrolls endlessly by itself. REScue adds RES's pause, "load more" and "pause after N pages", and can load the next page sooner. |
-| **Inline images and expandos (showImages)** | Reddit shows media inline itself. REScue adds hiding media in comments, a media viewer, and blocking media downloads. |
-| **Subreddit shortcut bar, subreddit tagger, logo link, search helper, local date, custom CSS, style tweaks, username hider, page navigator** | In REScue, adapted to Reddit's current page. Some are partial where Reddit keeps an element out of reach. |
-| **Auto-hide read posts, single click, cross-post links, wheel browse, quarantine notice, vote enhancements** | In REScue. |
-| **Show karma, penalty box, dashboard** | Partly. |
-| **Spoiler tags, hover cards, "more replies"** | Reddit does these itself. |
-| **Comment depth, context links, per-subreddit styles, account switcher, report-as-spam** | Obsolete or excluded. Reddit ignores `?depth=` and `?context=`, has no subreddit CSS, and switches accounts itself. RES's account switcher stored passwords, which REScue never does. |
-| **Submit helper, mod helper** | Not yet. |
+| RES module                                                                                                                                   | REScue                                                                                                                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Settings, backup and restore, presets, command line, troubleshooter**                                                                      | In REScue. Backup is a file you keep, your browser's own sync, or (opt-in) one settings file in your own Google Drive, Dropbox or OneDrive. Your RES backup's tags and filters can be imported. |
+| **filteReddit**                                                                                                                              | In REScue: keywords, subreddits, domains, users, flair and NSFW for posts; keyword, user, score and depth for comments; each with a reason and a way to reveal it.                              |
+| **Keyboard navigation**                                                                                                                      | In REScue: `j`/`k`, open, vote, save, hide, go-to keys and the help overlay. Voting on comments from the keyboard works through Reddit's own buttons.                                           |
+| **User tagger, user highlight**                                                                                                              | In REScue: tags, colours, ignore (now with an ignore button), vote tally, and highlights for moderators, friends and tagged users.                                                              |
+| **Comment navigator, hide child comments, show parent, remember collapsed comments, new comment count, saved comments, table tools**         | In REScue.                                                                                                                                                                                      |
+| **Comment tools (macros, big editor), view source, message menu, multireddit bar**                                                           | In REScue: macros and a big Markdown editor with a preview above the reply box, "source" for raw Markdown, and "mail ▾" and "feeds ▾" menus on the shortcut bar.                                |
+| **Night mode**                                                                                                                               | In REScue: always dark, always light, or follow Reddit's own switch (Reddit's switch still works too).                                                                                          |
+| **Never-ending Reddit**                                                                                                                      | Reddit scrolls endlessly by itself. REScue adds RES's pause, "load more" and "pause after N pages", and can load the next page sooner.                                                          |
+| **Inline images and expandos (showImages)**                                                                                                  | Reddit shows media inline itself. REScue adds hiding media in comments, a media viewer, and blocking media downloads.                                                                           |
+| **Subreddit shortcut bar, subreddit tagger, logo link, search helper, local date, custom CSS, style tweaks, username hider, page navigator** | In REScue, adapted to Reddit's current page. Some are partial where Reddit keeps an element out of reach.                                                                                       |
+| **Auto-hide read posts, single click, cross-post links, wheel browse, quarantine notice, vote enhancements**                                 | In REScue.                                                                                                                                                                                      |
+| **Show karma, penalty box, dashboard**                                                                                                       | Partly.                                                                                                                                                                                         |
+| **Spoiler tags, hover cards, "more replies"**                                                                                                | Reddit does these itself.                                                                                                                                                                       |
+| **Comment depth, context links, per-subreddit styles, account switcher, report-as-spam**                                                     | Obsolete or excluded. Reddit ignores `?depth=` and `?context=`, has no subreddit CSS, and switches accounts itself. RES's account switcher stored passwords, which REScue never does.           |
+| **Submit helper, mod helper**                                                                                                                | Not yet.                                                                                                                                                                                        |
 
 **REScue extras** that RES never had: the Old Reddit look, the neutrality filter, the low-effort
 reply filter, hiding promoted posts and "Suggested communities", an ignore button on posts and
@@ -191,8 +194,8 @@ address REScue may read, are in the [privacy policy](PRIVACY.md).
 ## How it works
 
 - **Selectors in one place.** Everything REScue reads from Reddit's page is named in
-  [`src/contracts/reddit.ts`](src/contracts/reddit.ts). Each entry is marked *verified* (checked
-  against the live site, with a date) or *candidate*, and features check their contracts at
+  [`src/contracts/reddit.ts`](src/contracts/reddit.ts). Each entry is marked _verified_ (checked
+  against the live site, with a date) or _candidate_, and features check their contracts at
   startup.
 - **Read-only toward Reddit's internals.** REScue reads Reddit's open shadow roots but never
   writes into them. Actions press Reddit's own controls and are confirmed by what Reddit's buttons
@@ -224,7 +227,7 @@ subreddit.
 
 Bug reports are welcome: open an [issue](https://github.com/BaconWappedBitcoin/REScue/issues).
 Please include your browser, the page address, and what you expected to happen. The settings
-console's *Troubleshooter* can copy a diagnostics report for you.
+console's _Troubleshooter_ can copy a diagnostics report for you.
 
 ## Credits
 
@@ -233,9 +236,9 @@ console's *Troubleshooter* can copy a diagnostics report for you.
   says so.
 - [Sheddit](https://github.com/kookaburrabarrel/sheddit), by kookaburrabarrel (GPL-3.0).
 - The neutrality data:
-  - Eady, Bonneau, Tucker and Nagler (2025), *News Sharing on Social Media*, Political Analysis.
+  - Eady, Bonneau, Tucker and Nagler (2025), _News Sharing on Social Media_, Political Analysis.
     Data doi:10.7910/DVN/1QMLOV, CC0.
-  - Robertson et al. (2018), *Partisan Bias Scores for Web Domains*. Data doi:10.7910/DVN/QAN5VX,
+  - Robertson et al. (2018), _Partisan Bias Scores for Web Domains_. Data doi:10.7910/DVN/QAN5VX,
     CC0.
 
 The full attribution is in [`NOTICE`](NOTICE).
