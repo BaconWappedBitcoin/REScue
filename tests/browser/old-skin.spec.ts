@@ -281,7 +281,8 @@ test('on a thread: the post and every comment get the vote column and flat links
   await expect(first).toHaveAttribute('data-rescue-ov', '1');
   await expect(post(page)).toHaveAttribute('data-rescue-ov', '1');
   await expect(post(page).locator('.rescue-olinks')).toContainText('comments');
-  await expect(first.locator('.rescue-ovote').first()).toBeVisible();
+  // The column has no height of its own (its arrows hang over the comment head); the arrows are seen.
+  await expect(first.locator('.rescue-ovote .rescue-oup').first()).toBeVisible();
   await expect(first.locator('.rescue-opts').first()).toContainText(/points|score/);
   const row = first.locator('.rescue-ocl').first();
   for (const word of ['permalink', 'save', 'report', 'reply']) {

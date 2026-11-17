@@ -56,10 +56,11 @@ export function partsCss(): string {
     `${R} .rescue-oth[data-kind="img"] { background: var(--os-panel) var(--os-thumb) center / cover no-repeat; }`,
     `${R} .rescue-oth[data-kind="link"] { background-image: radial-gradient(circle, var(--os-rank) 0 22%, transparent 24%); background-size: 40% 70%; }`,
     // A comment: the points text in its head, the old "[–]" mark, the flat link row under the body.
-    `${R} .rescue-ocv { position: absolute; left: 0; top: 2px; width: 22px; z-index: 1; }`,
+    // In the flow with no height (the arrows hang over the comment head), drawn over Reddit's grid.
+    `${R} .rescue-ocv { position: relative; top: 6px; width: 22px; height: 0; padding-top: 0; overflow: visible; z-index: 1; }`,
     `${R} .rescue-ocv .rescue-onum { display: none; }`,
     `${R} .rescue-ocv { gap: 0; }`,
-    `${R} .rescue-ocv .rescue-oarrow { width: 22px; }`,
+    `${R} .rescue-ocv .rescue-oarrow { width: 22px; flex-shrink: 0; }`,
     `${R} .rescue-opts { color: var(--os-meta); font: 10px/1.4 var(--os-font); margin-left: 6px; white-space: nowrap; }`,
     `${R} .rescue-ocl { margin: 1px 0 6px; padding-left: 0; }`,
     `${meta}::before { content: "[–]"; order: -1; margin-right: 4px; color: var(--os-meta); font: 10px/1.4 var(--os-font); cursor: pointer; }`,

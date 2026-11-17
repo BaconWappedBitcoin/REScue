@@ -154,7 +154,11 @@ export class CommentView {
     this.details?.addEventListener('toggle', this.onToggle);
     // The words are filled in before the pieces go into the page.
     this.fill();
-    host.append(this.vote.el);
+    // In the flow just before Reddit's <details>, not absolutely placed: Firefox lost the hit area of
+    // an absolutely placed column once Reddit inserted loaded replies around it, so a click on the up
+    // arrow fell through to Reddit's comment grid and collapsed the comment (live, 2026-11-16).
+    if (this.details) this.details.before(this.vote.el);
+    else host.append(this.vote.el);
     this.place();
     setAttr(host, MOUNT_ATTR, '1');
   }
