@@ -406,6 +406,10 @@ describe('disableChat and styleTweaks', () => {
     const css = tweaksCss({ ...base, hideSuggestedCommunities: true });
     expect(css).toContain('in-feed-community-recommendations');
     expect(css).toContain('display: none !important');
+    expect(tweaksCss(base)).not.toContain('recent-posts');
+    expect(tweaksCss({ ...base, hideRecentPosts: true })).toContain(
+      'recent-posts { display: none !important; }',
+    );
   });
 
   it('writes only validated colours and sizes into the tweaks stylesheet', () => {

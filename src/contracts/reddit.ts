@@ -553,6 +553,12 @@ export const C = {
   suggestedCommunities:
     'in-feed-community-recommendations, [slot="related-community-recommendation"]',
   /**
+   * Reddit's "Recent posts" box in the right sidebar (styleTweaks hideRecentPosts). VERIFIED LIVE
+   * 2026-11-17 (www. home feed, signed in, LibreWolf): `recent-posts` is a light-DOM element in
+   * `#right-sidebar-container`, holding `aside.recent-posts-right-rail` with the heading and "Clear".
+   */
+  recentPosts: 'recent-posts',
+  /**
    * Promoted posts and ad slots (hidePromoted, research R21). VERIFIED LIVE 2026-10-16 (www.,
    * signed in, both hosts): `shreddit-ad-post` sits in the feed on the home feed, r/popular,
    * r/science and r/pics (4-5 per few screens), and `shreddit-comments-page-ad` sits above a
@@ -1560,6 +1566,15 @@ export const CONTRACTS: PageContract[] = [
     required: false,
     status: 'verified',
     verifiedAt: '2026-10-18',
+    usedBy: ['styleTweaks'],
+  },
+  {
+    key: 'recentPosts',
+    kind: 'selector',
+    value: C.recentPosts,
+    required: false,
+    status: 'verified',
+    verifiedAt: '2026-11-17',
     usedBy: ['styleTweaks'],
   },
   {

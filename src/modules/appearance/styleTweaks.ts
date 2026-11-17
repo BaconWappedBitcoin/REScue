@@ -37,6 +37,8 @@ export interface TweakOptions {
   postTitleCapitalization?: string;
   /** Hide Reddit's "Suggested communities" blocks on every page. */
   hideSuggestedCommunities?: boolean;
+  /** Hide Reddit's "Recent posts" box in the right sidebar. */
+  hideRecentPosts?: boolean;
 }
 
 export const TRUNCATE_ATTR = 'data-rescue-truncate';
@@ -76,7 +78,9 @@ export function tweaksCss(o: TweakOptions): string {
       `a[${TRUNCATE_ATTR}] { display: inline-block; max-width: min(100%, 32em); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }`,
     );
   }
-  if (o.hideSuggestedCommunities) css.push(`${C.suggestedCommunities} { display: none !important; }`);
+  if (o.hideSuggestedCommunities)
+    css.push(`${C.suggestedCommunities} { display: none !important; }`);
+  if (o.hideRecentPosts) css.push(`${C.recentPosts} { display: none !important; }`);
   const transform = TITLE_TRANSFORM[o.postTitleCapitalization ?? 'none'];
   if (transform) css.push(`${postTitleSelector()} { text-transform: ${transform}; }`);
   return css.join('\n');
@@ -108,7 +112,7 @@ export const styleTweaks = defineModule({
   category: 'appearance',
   title: 'Style tweaks',
   description:
-    'Small visual changes on Reddit’s own layout: colour the post links you have visited, draw a line above top-level comments, switch animations off, and hide Reddit’s “Suggested communities”. They only reach what is visible in the page itself; Reddit’s sealed components are left as they are.',
+    'Small visual changes on Reddit’s own layout: colour the post links you have visited, draw a line above top-level comments, switch animations off, and hide Reddit’s “Suggested communities” and “Recent posts”. They only reach what is visible in the page itself; Reddit’s sealed components are left as they are.',
   enabledByDefault: true,
   options: {
     visitedLinks: {
@@ -182,6 +186,13 @@ export const styleTweaks = defineModule({
       title: 'Hide suggested communities',
       description:
         'Removes Reddit’s “Suggested communities” blocks from feeds, subreddits and thread pages. Turning this off brings them back at once.',
+    },
+    hideRecentPosts: {
+      type: 'boolean',
+      default: false,
+      title: 'Hide recent posts',
+      description:
+        'Removes the “Recent posts” box from the right sidebar on every page, so you do not have to press “Clear” each time. Turning this off brings it back at once.',
     },
   },
 
