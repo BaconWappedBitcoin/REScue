@@ -92,9 +92,18 @@ export class CommentView {
   ): CommentView | null {
     const id = host.getAttribute(A.id);
     if (!id) return null;
+    return new CommentView(host, ctx, prefs, id, CommentView.isOwn(host, ctx));
+  }
+
+  /**
+   * Whether the signed-in user wrote this comment. A comment just posted can lack its author
+   * attribute (or the session name can still be unknown) when first mounted, so intact() asks again
+   * and a changed answer remounts the row with the edit / delete words.
+   */
+  private static isOwn(host: Element, ctx: Ctx): boolean {
     const me = ctx.session.username?.toLowerCase();
     const author = host.getAttribute(A.author) || null;
-    return new CommentView(host, ctx, prefs, id, !!me && author?.toLowerCase() === me);
+    return !!me && author?.toLowerCase() === me;
   }
 
   private constructor(
@@ -102,7 +111,7 @@ export class CommentView {
     private readonly ctx: Ctx,
     private readonly prefs: () => CommentPrefs,
     id: string,
-    own: boolean,
+    private readonly own: boolean,
   ) {
     this.id = id;
     const target = { id, source: host };
@@ -135,6 +144,7 @@ export class CommentView {
             this.item('edit', () => ctx.actions.startEdit(target)),
             h('li', null, this.inboxToggle(target)),
             this.item('delete', () => ctx.actions.delete(target)),
+            this.item('brand affiliate', () => ctx.actions.postOption(target, 'brand')),
           ]
         : []),
       this.item('report', () => ctx.actions.report(target)),
@@ -317,6 +327,7 @@ export class CommentView {
    */
   intact(): boolean {
     return (
+      CommentView.isOwn(this.host, this.ctx) === this.own &&
       this.vote.el.parentElement === this.host &&
       this.links.parentElement !== null &&
       (this.pts.parentElement !== null || !this.meta()?.firstElementChild)

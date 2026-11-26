@@ -28,6 +28,9 @@ export function threadCss(): string {
     `${T} > * { grid-area: 4 / 1; }`,
     `${T} > .rescue-ovote { grid-area: 1 / 1; }`,
     `${T} > .rescue-oth { display: none; }`,
+    // Reddit's other children (a "See more" button, menus) are parked in the 0px row under the vote
+    // column; their text overflowed it and painted down the left edge. Kept in the page, unseen.
+    `${T} > :not(.rescue-ovote, .rescue-oth, .rescue-obody, ${C.mediaContainer}, ${s.textBody}) { max-height: 0; overflow: hidden; }`,
     `${T} > .rescue-obody { grid-area: 1 / 2; }`,
     `${T} > ${C.mediaContainer} { grid-area: 2 / 2; padding-top: 4px; }`,
     `${T} > ${s.textBody} { grid-area: 3 / 2; font-size: 14px; color: var(--os-fg); }`,

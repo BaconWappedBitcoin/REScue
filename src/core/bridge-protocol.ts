@@ -28,7 +28,8 @@ export type NativeControl =
 export type MenuKind = 'post' | 'comment';
 /** Which row of that menu the op looks for, by its text. */
 /** `report` only opens Reddit's own report dialog; it is never confirmed or toggled. */
-export type MenuItemKind = 'save' | 'hide' | 'report' | 'inbox' | 'delete';
+export type MenuItemKind =
+  'save' | 'hide' | 'report' | 'inbox' | 'delete' | 'edit' | 'spoiler' | 'nsfw' | 'brand';
 
 export type BridgeRequest =
   | { op: 'partial.load'; ref: string }

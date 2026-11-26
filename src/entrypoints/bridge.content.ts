@@ -164,7 +164,12 @@ export default defineContentScript({
 
     /** Item pattern: the wanted row's text, and its already-applied text. */
     const rowState = (item: MenuItemKind, text: string): 'on' | 'off' =>
-      item === 'report' || item === 'delete'
+      item === 'report' ||
+      item === 'delete' ||
+      item === 'edit' ||
+      item === 'spoiler' ||
+      item === 'nsfw' ||
+      item === 'brand'
         ? 'off'
         : (item === 'save'
               ? C.saveHide.saveOnText
@@ -202,6 +207,10 @@ export default defineContentScript({
         report: C.saveHide.reportText,
         inbox: C.saveHide.inboxText,
         delete: C.saveHide.deleteText,
+        edit: C.saveHide.editText,
+        spoiler: C.saveHide.spoilerText,
+        nsfw: C.saveHide.nsfwText,
+        brand: C.saveHide.brandText,
       }[item];
       const findRow = (): Element | undefined =>
         deepQueryAll(box, C.saveHide.item).find((n) => wanted.test((n.textContent ?? '').trim()));

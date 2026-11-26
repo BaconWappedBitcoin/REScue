@@ -375,6 +375,12 @@ export const C = {
     inboxOnText: /^\s*(?:disable|turn\s+off)\b/i,
     /** The Delete row of your own post's or comment's menu ("Delete comment", seen live 2026-10-19; Reddit then asks to confirm). */
     deleteText: /^\s*delete(?:\s+(?:post|comment))?\s*$/i,
+    /** The Edit row of your OWN post's menu ("Edit post body", seen in Firefox 2026-11-26) or comment's. */
+    editText: /^\s*edit(?:\s+(?:post(?:\s+body)?|comment))?\s*$/i,
+    /** Your own post's tag rows: "Add spoiler tag" / "Remove spoiler tag", "Add NSFW tag", "Mark as brand affiliate". */
+    spoilerText: /^\s*(?:add|remove)\s+spoiler(?:\s+tag)?\s*$/i,
+    nsfwText: /^\s*(?:add|remove)\s+nsfw(?:\s+tag)?\s*$/i,
+    brandText: /^\s*(?:mark|unmark)\s+as\s+brand\s+affiliate\s*$/i,
   },
   /** Boolean attributes on a post, VERIFIED LIVE 2026-10-15 (R20). */
   postFlagAttrs: { locked: 'locked', stickied: 'stickied' },

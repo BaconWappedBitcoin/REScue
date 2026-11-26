@@ -89,6 +89,8 @@ export interface ActionApi {
   inboxRepliesState(target: ActionTarget): Promise<MenuState>;
   /** Press the Delete row of your own item's menu; Reddit then asks for confirmation itself. */
   delete(target: ActionTarget): Promise<ActionResult>;
+  /** Press the spoiler / NSFW tag or brand-affiliate row of your own post's (or comment's) menu. */
+  postOption(target: ActionTarget, option: 'spoiler' | 'nsfw' | 'brand'): Promise<ActionResult>;
   /** Whether Reddit's own Hide row reads as already applied (null when unreadable). */
   hideState(target: ActionTarget): Promise<MenuState>;
   reply(target: ActionTarget, markdown: string): Promise<ActionResult>;
@@ -326,6 +328,16 @@ export function createActionApi(deps: ActionDeps): ActionApi {
       );
       return r.ok ? { ok: true } : failure(r.error);
     },
+    async postOption(target, option) {
+      if (!deps.session().signedIn) return { ok: false, reason: 'signed-out' };
+      const r = await menuRequest(
+        deps.bridge.ref(target.source),
+        menuOf(target.source),
+        option,
+        true,
+      );
+      return r.ok ? { ok: true } : failure(r.error);
+    },
     async reply() {
       return deps.session().signedIn ? NOT_DELEGATED : { ok: false, reason: 'signed-out' };
     },
@@ -366,6 +378,12 @@ export function createActionApi(deps: ActionDeps): ActionApi {
       return r.ok ? { ok: true } : failure(r.error);
     },
     startReply: (target) => compose(target, 'reply'),
-    startEdit: (target) => compose(target, 'edit'),
+    startEdit: async (target) => {
+      if (menuOf(target.source) === 'comment') return compose(target, 'edit');
+      // A post's Edit is a row of its own overflow menu; Reddit opens its own editor in the post.
+      if (!deps.session().signedIn) return { ok: false, reason: 'signed-out' };
+      const r = await menuRequest(deps.bridge.ref(target.source), 'post', 'edit', true);
+      return r.ok ? { ok: true } : failure(r.error);
+    },
   };
 }

@@ -66,6 +66,8 @@ export class PostView {
   private readonly thumb: HTMLElement;
   /** RES's expando: shows Reddit's own media full size under the row (feeds only). */
   private readonly expand: HTMLButtonElement;
+  /** Edit, delete, spoiler, nsfw, brand affiliate and reply notifications: your own posts only. */
+  private readonly ownItems: HTMLElement[];
   /** "show images" (showAll.ts) was on when this post first offered its media: expanded once. */
   private autoExpanded = false;
   private saved = false;
@@ -85,6 +87,20 @@ export class PostView {
     first: Post,
   ) {
     const target = { id: first.id, source: host };
+    // The words of your own post's menu (shown only on your posts, see render()).
+    this.ownItems = [
+      this.item('edit', 'edit', () => ctx.actions.startEdit(target)),
+      this.item('delete', 'delete', () => ctx.actions.delete(target)),
+      this.item('spoiler', 'spoiler', () => ctx.actions.postOption(target, 'spoiler')),
+      this.item('nsfw', 'nsfw', () => ctx.actions.postOption(target, 'nsfw')),
+      this.item('brand', 'brand affiliate', () => ctx.actions.postOption(target, 'brand')),
+      this.item('inbox', 'reply notifications', async () => {
+        const now = await ctx.actions.inboxRepliesState(target);
+        if (now === null) return { ok: false, reason: 'not-found', detail: 'no notifications row' };
+        return ctx.actions.inboxReplies(target, now === 'off');
+      }),
+    ];
+    for (const li of this.ownItems) li.hidden = true;
     // Reddit's in-feed ads have a post's shape; the row says it is one, as old Reddit did.
     const ad = host.matches(C.adPost);
     this.vote = new VoteBox({
@@ -126,6 +142,7 @@ export class PostView {
       h('li', null, this.save),
       this.item('hide', 'hide', () => ctx.actions.hide(target, true)),
       this.item('report', 'report', () => ctx.actions.report(target)),
+      ...this.ownItems,
       h('li', null, this.source),
     );
     onActivate(this.save, () => void this.toggleSave(target));
@@ -284,6 +301,9 @@ export class PostView {
     setText(this.domain, domainText(p.domain, p.subreddit, isSelf));
     setText(this.when, agoText(p.created));
     setAttr(this.when, 'title', p.created ? p.created.toString() : null);
+    const me = this.ctx.session.username?.toLowerCase();
+    const mine = !!me && p.author?.toLowerCase() === me;
+    for (const li of this.ownItems) li.hidden = !mine;
     const who = p.author ?? '[deleted]';
     setText(this.author, who);
     setAttr(this.author, 'href', p.author ? `/user/${p.author}/` : null);
