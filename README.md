@@ -106,7 +106,7 @@ Screenshots are taken signed out, and other people's usernames are replaced with
 **From the stores:**
 
 - **Chrome, Edge or Brave:** [REScue for Reddit on the Chrome Web Store](https://chromewebstore.google.com/detail/rescue-for-reddit/ddjbmknckcglmfohabaicadgeddpghbh).
-- **Firefox:** submitted to Firefox Add-ons; the link will follow once it is approved.
+- **Firefox or LibreWolf:** [REScue for Reddit on Firefox Add-ons](https://addons.mozilla.org/addon/rescue-reddit/).
 
 **From a release:** download `rescue-<version>-chrome.zip` from
 [Releases](https://github.com/BaconWappedBitcoin/REScue/releases), unzip it, and load the folder
