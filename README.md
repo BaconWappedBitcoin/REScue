@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/rescue-for-reddit/ddjbmknckcglmfohabaicadgeddpghbh"><strong>Get it for Chrome</strong></a>
-  Â·
+  ·
   <a href="https://www.reddit.com/r/REScueOfficial/"><strong>r/REScueOfficial</strong></a> (the official subreddit)
 </p>
 
@@ -34,7 +34,8 @@ instead of breaking the page.
   tabs, green pinned posts, thumbnails that open the link, the thin subreddit bar across the top,
   old-style comment heads with a `*` after an edited comment's age, "show image" to expand a
   post's media in the feed, `edit delete spoiler nsfw` and other words for your own posts and
-  comments (the options of Reddit's own menu), and (if you like) top bars that scroll away as on old Reddit. It
+  comments (the options of Reddit's own menu), and (if you like) top bars that scroll away as on
+  old Reddit. It
   appears from the first paint, with no flash of the new design,
   and REScue starts while Reddit is still sending the page. Every vote and button press goes
   through Reddit's own controls.
@@ -69,7 +70,7 @@ instead of breaking the page.
   inline-media hiding, and media keys for the selected post (`[` and `]` step a gallery, `m` mutes
   a video, plus RES's image size and move keys).
 - **Night mode**: always dark, always light, or follow Reddit's own switch.
-- **Shortcut bar** across the top with your subreddits, plus "mail â–¾" and "feeds â–¾" menus for your
+- **Shortcut bar** across the top with your subreddits, plus "mail ▾" and "feeds ▾" menus for your
   inbox and custom feeds.
 - **Settings console** with search, presets, quick toggles, a troubleshooter, and backup, restore
   and **import from a RES backup** (your user tags and filters come with you).
@@ -85,8 +86,8 @@ core** in the settings console. Each has a plain-language description and per-op
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/old-thread.png" alt="A comment thread in the Old Reddit look: [â€“] author, points, age, and permalink save report reply under each comment" width="900">
-  <br><em>Comment threads: old-style comment heads and link rows, "hide child comments" and "â†‘ parent".</em>
+  <img src="docs/screenshots/old-thread.png" alt="A comment thread in the Old Reddit look: [–] author, points, age, and permalink save report reply under each comment" width="900">
+  <br><em>Comment threads: old-style comment heads and link rows, "hide child comments" and "↑ parent".</em>
 </p>
 
 <table>
@@ -156,7 +157,7 @@ By RES module:
 | **Keyboard navigation**                                                                                                                      | In REScue: `j`/`k`, open, vote, save, hide, go-to keys and the help overlay. Voting on comments from the keyboard works through Reddit's own buttons.                                           |
 | **User tagger, user highlight**                                                                                                              | In REScue: tags, colours, ignore (now with an ignore button), vote tally, and highlights for moderators, friends and tagged users.                                                              |
 | **Comment navigator, hide child comments, show parent, remember collapsed comments, new comment count, saved comments, table tools**         | In REScue.                                                                                                                                                                                      |
-| **Comment tools (macros, big editor), view source, message menu, multireddit bar**                                                           | In REScue: macros and a big Markdown editor with a preview above the reply box, "source" for raw Markdown, and "mail â–¾" and "feeds â–¾" menus on the shortcut bar.                                |
+| **Comment tools (macros, big editor), view source, message menu, multireddit bar**                                                           | In REScue: macros and a big Markdown editor with a preview above the reply box, "source" for raw Markdown, and "mail ▾" and "feeds ▾" menus on the shortcut bar.                                |
 | **Night mode**                                                                                                                               | In REScue: always dark, always light, or follow Reddit's own switch (Reddit's switch still works too).                                                                                          |
 | **Never-ending Reddit**                                                                                                                      | Reddit scrolls endlessly by itself. REScue adds RES's pause, "load more" and "pause after N pages", and can load the next page sooner.                                                          |
 | **Inline images and expandos (showImages)**                                                                                                  | Reddit shows media inline itself. REScue adds hiding media in comments, a media viewer, and blocking media downloads.                                                                           |
@@ -251,7 +252,7 @@ REScue is free and always will be. If you would like to support it:
 - Bitcoin: `bc1que3qguxlvg0gkp4yqn6dju82rvqq5rmdaylj27`
 - Ethereum: `0x23c46670511FfF3497A11f3ebbcdAc244b91F794`
 
-The same addresses are in the add-on under settings â€º About REScue. Check the address you paste
+The same addresses are in the add-on under settings › About REScue. Check the address you paste
 into your wallet against one of these two places before you send.
 
 ## License
